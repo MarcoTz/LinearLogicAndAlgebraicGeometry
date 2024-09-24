@@ -1,6 +1,8 @@
-[package]
-name = "linearlogicandalgebraicgeometry"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = [
+    "lib/mell/",
+    "app"
+]
 
-[dependencies]
+resolver = "2"
+default-members = ["app"]
