@@ -184,10 +184,8 @@ pub fn ctr(prem: Proof, active: &Formula) -> Result<Proof, Error> {
 #[cfg(test)]
 mod proof_test {
     use super::{ax, ctr, der, tensor};
-    use crate::{
-        formula::Formula,
-        preformula::{OrientedAtom, Polarity},
-    };
+    use crate::formula::Formula;
+    use common::definitions::{OrientedAtom, Polarity};
     use std::rc::Rc;
 
     #[test]

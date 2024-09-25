@@ -1,4 +1,5 @@
-use super::preformula::{OrientedAtom, Preformula};
+use super::preformula::Preformula;
+use common::definitions::OrientedAtom;
 use std::{fmt, rc::Rc};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,7 +83,7 @@ impl From<OrientedAtom> for Formula {
 #[cfg(test)]
 mod formula_tests {
     use super::Formula;
-    use crate::preformula::{OrientedAtom, Polarity};
+    use common::definitions::{OrientedAtom, Polarity};
     use std::rc::Rc;
 
     #[test]

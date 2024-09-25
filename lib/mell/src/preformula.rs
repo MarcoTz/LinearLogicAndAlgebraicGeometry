@@ -1,37 +1,6 @@
 use super::formula::Formula;
+use common::definitions::OrientedAtom;
 use std::{fmt, rc::Rc};
-
-pub type Atom = String;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Polarity {
-    Pos,
-    Neg,
-}
-
-impl Polarity {
-    pub fn flip(self) -> Polarity {
-        match self {
-            Polarity::Pos => Polarity::Neg,
-            Polarity::Neg => Polarity::Pos,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OrientedAtom {
-    pub atom: Atom,
-    pub pol: Polarity,
-}
-
-impl OrientedAtom {
-    pub fn flip(self) -> OrientedAtom {
-        OrientedAtom {
-            atom: self.atom,
-            pol: self.pol.flip(),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub enum Preformula {
@@ -61,20 +30,6 @@ impl From<Formula> for Preformula {
     }
 }
 
-impl fmt::Display for Polarity {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Polarity::Pos => f.write_str("+"),
-            Polarity::Neg => f.write_str("-"),
-        }
-    }
-}
-
-impl fmt::Display for OrientedAtom {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.pol, self.atom)
-    }
-}
 impl fmt::Display for Preformula {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
