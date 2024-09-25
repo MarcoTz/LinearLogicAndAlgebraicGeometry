@@ -2,6 +2,8 @@
 members = [
     "lib/mll/",
     "lib/proof_net/",
+    "lib/schemes/",
+    "lib/logic2geometry",
     "lib/common",
     "app"
 ]
