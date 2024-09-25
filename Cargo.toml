@@ -1,7 +1,8 @@
 [workspace]
 members = [
-    "lib/mell/",
-    "lib/imell/",
+    "lib/mll/",
+    "lib/proof_net/",
+    "lib/common",
     "app"
 ]
 
