@@ -5,6 +5,8 @@ use std::fmt;
 pub enum Error {
     VertexNotFound(Vertex),
     BadProof,
+    MissingPremise,
+    MissingConclusion,
 }
 
 impl fmt::Display for Error {
@@ -12,6 +14,8 @@ impl fmt::Display for Error {
         match self {
             Error::VertexNotFound(v) => write!(f, "Could not find vertex {v}"),
             Error::BadProof => write!(f, "Proof is malformed"),
+            Error::MissingPremise => write!(f, "Expected premise, but found none"),
+            Error::MissingConclusion => write!(f, "Expected conclusion, but found none"),
         }
     }
 }
