@@ -1,3 +1,3 @@
 pub struct ProjectiveSpace {
-    pub dim: int,
+    pub dim: i32,
 }

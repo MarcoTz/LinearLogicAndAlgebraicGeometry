@@ -1,6 +1,6 @@
 use super::preformula::Preformula;
 use common::definitions::OrientedAtom;
-use std::{fmt, rc::Rc};
+use std::{fmt, ops::Neg, rc::Rc};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Formula {
@@ -11,10 +11,31 @@ pub enum Formula {
     Quest(Rc<Formula>),
 }
 
-impl Formula {
-    pub fn neg(self) -> Formula {
+impl Neg for Formula {
+    type Output = Formula;
+    fn neg(self) -> Self::Output {
         let pr: Preformula = self.into();
         Preformula::Neg(Rc::new(pr)).into()
+    }
+}
+
+impl Formula {
+    pub fn depth(&self) -> i32 {
+        match self {
+            Formula::Atomic(_) => 0,
+            Formula::Tensor(l, r) => l.depth().max(r.depth()),
+            Formula::Par(l, r) => l.depth().max(r.depth()),
+            Formula::Bang(form) => form.depth() + 1,
+            Formula::Quest(form) => form.depth() + 1,
+        }
+    }
+
+    pub fn is_linear(&self) -> bool {
+        self.depth() == 0
+    }
+
+    pub fn is_shallow(&self) -> bool {
+        self.depth() <= 1
     }
 }
 
@@ -77,38 +98,5 @@ impl From<Preformula> for Formula {
 impl From<OrientedAtom> for Formula {
     fn from(at: OrientedAtom) -> Formula {
         Formula::Atomic(at)
-    }
-}
-
-#[cfg(test)]
-mod formula_tests {
-    use super::Formula;
-    use common::definitions::{OrientedAtom, Polarity};
-    use std::rc::Rc;
-
-    #[test]
-    fn eq() {
-        let form1 = Formula::Tensor(
-            Rc::new(Formula::Atomic(OrientedAtom {
-                atom: "A".to_owned(),
-                pol: Polarity::Pos,
-            })),
-            Rc::new(Formula::Atomic(OrientedAtom {
-                atom: "A".to_owned(),
-                pol: Polarity::Neg,
-            })),
-        );
-
-        let form2 = Formula::Tensor(
-            Rc::new(Formula::Atomic(OrientedAtom {
-                atom: "A".to_owned(),
-                pol: Polarity::Pos,
-            })),
-            Rc::new(Formula::Atomic(OrientedAtom {
-                atom: "A".to_owned(),
-                pol: Polarity::Neg,
-            })),
-        );
-        assert_eq!(form1, form2)
     }
 }

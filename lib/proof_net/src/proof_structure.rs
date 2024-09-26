@@ -1,136 +1,197 @@
-use super::{directed_graph::DirectedMultiGraph, errors::Error};
-use std::fmt;
+use super::errors::Error;
+use mll::formula::Formula;
+use std::{collections::HashSet, fmt, ops::Neg};
 
-#[derive(Clone)]
-pub enum RuleLabel {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum VertexLabel {
     Ax,
     Cut,
     Tensor,
     Par,
     Bang,
     Quest,
-    Ctr,
-    Weak,
-    Pax,
-    Prom,
-    Der,
     C,
 }
 
-pub struct Link<T> {
-    premises: Vec<T>,
-    rule: RuleLabel,
-    conclusions: Vec<T>,
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub struct Vertex {
+    label: VertexLabel,
+    num: i32,
 }
 
-pub trait ProofStructure: DirectedMultiGraph {
-    fn negate(e: Self::EdgeLabel) -> Self::EdgeLabel;
-    fn tensor(e1: Self::EdgeLabel, e2: Self::EdgeLabel) -> Self::EdgeLabel;
-    fn par(e1: Self::EdgeLabel, e2: Self::EdgeLabel) -> Self::EdgeLabel;
-    fn is_quest(e: &Self::EdgeLabel) -> bool;
-    fn add_link(&mut self, lnk: Link<Self::EdgeLabel>);
+pub struct Edge {
+    pub from: Vertex,
+    pub to: Vertex,
+    pub label: Formula,
+}
 
-    fn ax_link(&mut self, conclusion: Self::EdgeLabel) {
-        let conc_neg = Self::negate(conclusion.clone());
-        let link = Link {
-            premises: vec![],
-            rule: RuleLabel::Ax,
-            conclusions: vec![conclusion, conc_neg],
-        };
-        self.add_link(link)
+pub struct ProofStructure {
+    vertices: HashSet<Vertex>,
+    edges: Vec<Edge>,
+}
+
+impl Default for ProofStructure {
+    fn default() -> ProofStructure {
+        ProofStructure::new()
+    }
+}
+
+impl ProofStructure {
+    pub fn new() -> ProofStructure {
+        ProofStructure {
+            vertices: HashSet::new(),
+            edges: vec![],
+        }
     }
 
-    fn cut_link(&mut self, premise: Self::EdgeLabel) {
-        let premise_neg = Self::negate(premise.clone());
-        let link = Link {
-            premises: vec![premise, premise_neg],
-            rule: RuleLabel::Cut,
-            conclusions: vec![],
+    fn new_vert(&mut self, label: VertexLabel) -> Vertex {
+        let new_num = self.vertices.len() as i32;
+        let new_vert = Vertex {
+            label,
+            num: new_num,
         };
-        self.add_link(link)
+        self.vertices.insert(new_vert.clone());
+        new_vert
     }
 
-    fn tensor_link(&mut self, premise_left: Self::EdgeLabel, premise_right: Self::EdgeLabel) {
-        let link = Link {
-            premises: vec![premise_left.clone(), premise_right.clone()],
-            rule: RuleLabel::Tensor,
-            conclusions: vec![Self::tensor(premise_left, premise_right)],
-        };
-        self.add_link(link)
+    fn find_vert(&self, vert: &Vertex) -> Result<&Vertex, Error> {
+        self.vertices
+            .iter()
+            .find(|v| **v == *vert)
+            .ok_or(Error::VertexNotFound(vert.to_owned()))
     }
 
-    fn par_link(&mut self, premise_left: Self::EdgeLabel, premise_right: Self::EdgeLabel) {
-        let link = Link {
-            premises: vec![premise_left.clone(), premise_right.clone()],
-            rule: RuleLabel::Par,
-            conclusions: vec![Self::par(premise_left, premise_right)],
+    pub fn add_ax_link(
+        &mut self,
+        conclusion: Formula,
+        next_pos: &Vertex,
+        next_neg: &Vertex,
+    ) -> Result<(), Error> {
+        let new_vert = self.new_vert(VertexLabel::Ax);
+        let to_pos = self.find_vert(next_pos)?;
+        let to_neg = self.find_vert(next_neg)?;
+        let edg_left = Edge {
+            from: new_vert.clone(),
+            to: to_pos.to_owned(),
+            label: conclusion.clone(),
         };
-        self.add_link(link)
-    }
-
-    fn ctr_link(&mut self, premise: Self::EdgeLabel) -> Result<(), Box<dyn std::error::Error>> {
-        if !Self::is_quest(&premise) {
-            Err(Error::BadLabel(format!("{}", premise)))
-        } else {
-            Ok(())
-        }?;
-        let link = Link {
-            premises: vec![premise.clone(), premise.clone()],
-            rule: RuleLabel::Ctr,
-            conclusions: vec![premise],
+        let edg_right = Edge {
+            from: new_vert.clone(),
+            to: to_neg.to_owned(),
+            label: conclusion.neg(),
         };
-        self.add_link(link);
+        self.edges.push(edg_left);
+        self.edges.push(edg_right);
         Ok(())
     }
 
-    fn pax_link(&mut self, premise: Self::EdgeLabel) -> Result<(), Box<dyn std::error::Error>> {
-        if !Self::is_quest(&premise) {
-            Err(Error::BadLabel(format!("{}", premise)))
-        } else {
-            Ok(())
-        }?;
-        let link = Link {
-            premises: vec![premise.clone()],
-            rule: RuleLabel::Pax,
-            conclusions: vec![premise],
+    pub fn add_cut_link(
+        &mut self,
+        premise: Formula,
+        last_pos: &Vertex,
+        last_neg: &Vertex,
+    ) -> Result<(), Error> {
+        let new_vert = self.new_vert(VertexLabel::Cut);
+        let last_pos = self.find_vert(last_pos)?;
+        let last_neg = self.find_vert(last_neg)?;
+        let edg_left = Edge {
+            to: new_vert.clone(),
+            from: last_pos.to_owned(),
+            label: premise.clone(),
         };
-        self.add_link(link);
+        let edg_right = Edge {
+            to: new_vert,
+            from: last_neg.to_owned(),
+            label: premise.neg(),
+        };
+        self.edges.push(edg_left);
+        self.edges.push(edg_right);
         Ok(())
     }
 
-    fn prom_link(&mut self, premise: Self::EdgeLabel) {
-        let link = Link {
-            premises: vec![premise.clone()],
-            rule: RuleLabel::Prom,
-            conclusions: vec![premise],
+    pub fn add_tensor_link(
+        &mut self,
+        prem_left: Formula,
+        prem_right: Formula,
+        last_left: &Vertex,
+        last_right: &Vertex,
+    ) -> Result<(), Error> {
+        let new_vert = self.new_vert(VertexLabel::Tensor);
+        let last_left = self.find_vert(last_left)?;
+        let last_right = self.find_vert(last_right)?;
+        let edg_left = Edge {
+            from: last_left.to_owned(),
+            to: new_vert.clone(),
+            label: prem_left,
         };
-        self.add_link(link)
+        let edg_right = Edge {
+            from: last_right.to_owned(),
+            to: new_vert,
+            label: prem_right,
+        };
+        self.edges.push(edg_left);
+        self.edges.push(edg_right);
+        Ok(())
     }
 
-    fn weak_link(&mut self, conclusion: Self::EdgeLabel) {
-        let link = Link {
-            premises: vec![],
-            rule: RuleLabel::Weak,
-            conclusions: vec![conclusion],
+    pub fn add_par_link(
+        &mut self,
+        prem_left: Formula,
+        prem_right: Formula,
+        last_left: &Vertex,
+        last_right: &Vertex,
+    ) -> Result<(), Error> {
+        let new_vert = self.new_vert(VertexLabel::Par);
+        let last_left = self.find_vert(last_left)?;
+        let last_right = self.find_vert(last_right)?;
+        let edg_left = Edge {
+            from: last_left.to_owned(),
+            to: new_vert.clone(),
+            label: prem_left,
         };
-        self.add_link(link)
+        let edg_right = Edge {
+            from: last_right.to_owned(),
+            to: new_vert.clone(),
+            label: prem_right,
+        };
+        self.edges.push(edg_left);
+        self.edges.push(edg_right);
+        Ok(())
     }
 
-    fn der_link(&mut self, premise: Self::EdgeLabel) {
-        let link = Link {
-            premises: vec![premise.clone()],
-            rule: RuleLabel::Der,
-            conclusions: vec![premise.clone()],
+    pub fn add_conclusion(&mut self, premise: Formula, last: &Vertex) -> Result<(), Error> {
+        let new_vert = self.new_vert(VertexLabel::C);
+        let last = self.find_vert(last)?;
+        let new_edg = Edge {
+            to: new_vert,
+            from: last.to_owned(),
+            label: premise,
         };
-        self.add_link(link)
+        self.edges.push(new_edg);
+        Ok(())
     }
 
-    fn conc_link(&mut self, premise: Self::EdgeLabel) {
-        let link = Link {
-            premises: vec![premise],
-            rule: RuleLabel::C,
-            conclusions: vec![],
-        };
-        self.add_link(link)
+    pub fn occurs(&self, f: &Formula) -> bool {
+        self.edges.iter().any(|edg| edg.label == *f)
+    }
+}
+
+impl fmt::Display for Vertex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.label.fmt(f)
+    }
+}
+
+impl fmt::Display for VertexLabel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            VertexLabel::Ax => f.write_str("Ax"),
+            VertexLabel::Cut => f.write_str("Cut"),
+            VertexLabel::Tensor => f.write_str("Tensor"),
+            VertexLabel::Par => f.write_str("Par"),
+            VertexLabel::Bang => f.write_str("!"),
+            VertexLabel::Quest => f.write_str("?"),
+            VertexLabel::C => f.write_str("c"),
+        }
     }
 }

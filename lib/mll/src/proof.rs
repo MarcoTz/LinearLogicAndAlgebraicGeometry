@@ -1,112 +1,87 @@
 use super::{
+    deduction::{Deduction, DeductionRule},
     errors::Error,
-    formula::Formula,
-    sequent::{split_seq, Sequent},
+    sequent::Sequent,
 };
-use std::{fmt, rc::Rc};
 
-#[derive(Debug)]
-pub enum Rule {
-    Ax,
-    Cut,
-    Tensor,
-    Par,
-    Ex,
+#[derive(Clone, PartialEq, Eq)]
+pub struct Proof {
+    conclusion: Sequent,
+    premises: Vec<Proof>,
 }
 
-impl fmt::Display for Rule {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Rule::Ax => f.write_str("Ax"),
-            Rule::Cut => f.write_str("Cut"),
-            Rule::Tensor => f.write_str("Tensor"),
-            Rule::Par => f.write_str("Par"),
-            Rule::Ex => f.write_str("Ex"),
+impl Proof {
+    pub fn new(rule: DeductionRule) -> Proof {
+        let premises = rule
+            .get_premises()
+            .into_iter()
+            .map(|s| Proof {
+                conclusion: s,
+                premises: vec![],
+            })
+            .collect();
+        Proof {
+            conclusion: rule.get_conclusion(),
+            premises,
         }
     }
-}
 
-pub struct Proof {
-    pub premises: Vec<Proof>,
-    pub rule: Rule,
-    pub conclusion: Sequent,
-}
+    pub fn extend_bottom(&mut self, rule: DeductionRule) -> Result<(), Error> {
+        let rule_premises = rule.get_premises();
+        if rule_premises.len() != 1 {
+            Err(Error::WrongNumberOfPremises {
+                expected: 1,
+                found: rule_premises.len() as i32,
+            })
+        } else {
+            Ok(())
+        }?;
+        let premise = rule_premises
+            .first()
+            .ok_or(Error::MissingPremise(self.conclusion.clone()))?;
+        if *premise == self.conclusion {
+            Ok(())
+        } else {
+            Err(Error::SequentMismatch(
+                self.conclusion.clone(),
+                premise.to_owned(),
+            ))
+        }?;
 
-pub fn ax(f: Formula) -> Proof {
-    Proof {
-        premises: vec![],
-        rule: Rule::Ax,
-        conclusion: vec![f.clone().neg(), f],
+        let new_premise = Proof {
+            conclusion: self.conclusion.clone(),
+            premises: self.premises.clone(),
+        };
+        self.premises = vec![new_premise];
+        self.conclusion = rule.get_conclusion();
+        Ok(())
     }
-}
 
-pub fn cut(left: Proof, right: Proof, active: &Formula) -> Result<Proof, Error> {
-    let active_neg = active.clone().neg();
-    let split_left = split_seq(left.conclusion.clone(), active)?;
-    let split_right = split_seq(right.conclusion.clone(), &active_neg)?;
-    let mut conclusion = split_left.left;
-    conclusion.extend(split_left.right);
-    conclusion.extend(split_right.left);
-    conclusion.extend(split_right.right);
-    Ok(Proof {
-        premises: vec![left, right],
-        rule: Rule::Cut,
-        conclusion,
-    })
-}
+    pub fn combine_bottom(premises: Vec<Proof>, rule: DeductionRule) -> Result<Proof, Error> {
+        let rule_premises = rule.get_premises();
+        if premises.len() != rule_premises.len() {
+            Err(Error::WrongNumberOfPremises {
+                expected: rule_premises.len() as i32,
+                found: premises.len() as i32,
+            })
+        } else {
+            Ok(())
+        }?;
+        for (proof_premise, rule_premise) in premises.iter().zip(rule_premises.iter()) {
+            if proof_premise.conclusion != *rule_premise {
+                Err(Error::SequentMismatch(
+                    proof_premise.conclusion.to_owned(),
+                    rule_premise.to_owned(),
+                ))
+            } else {
+                Ok(())
+            }?;
+        }
 
-pub fn tensor(
-    left: Proof,
-    right: Proof,
-    active_a: &Formula,
-    active_b: &Formula,
-) -> Result<Proof, Error> {
-    let split_left = split_seq(left.conclusion.clone(), active_a)?;
-    let split_right = split_seq(right.conclusion.clone(), active_b)?;
-    let mut conclusion = split_left.left;
-    conclusion.extend(split_left.right);
-    conclusion.push(Formula::Tensor(
-        Rc::new(split_left.active),
-        Rc::new(split_right.active),
-    ));
-    conclusion.extend(split_right.left);
-    conclusion.extend(split_right.right);
-
-    Ok(Proof {
-        premises: vec![left, right],
-        rule: Rule::Tensor,
-        conclusion,
-    })
-}
-
-pub fn par(prem: Proof, active_a: &Formula, active_b: &Formula) -> Result<Proof, Error> {
-    let split1 = split_seq(prem.conclusion.clone(), active_a)?;
-    let mut new_s = split1.left;
-    new_s.extend(split1.right);
-    let split2 = split_seq(new_s, active_b)?;
-    let mut conclusion = split2.left;
-    conclusion.push(Formula::Par(Rc::new(split1.active), Rc::new(split2.active)));
-    conclusion.extend(split2.right);
-    Ok(Proof {
-        premises: vec![prem],
-        rule: Rule::Par,
-        conclusion,
-    })
-}
-
-pub fn ex(prem: Proof, active_a: &Formula, active_b: &Formula) -> Result<Proof, Error> {
-    let split1 = split_seq(prem.conclusion.clone(), active_a)?;
-    let mut new_s = split1.left;
-    new_s.extend(split1.right);
-    let split2 = split_seq(new_s, active_b)?;
-    let mut conclusion = split2.left;
-    conclusion.push(split2.active);
-    conclusion.push(split1.active);
-    conclusion.extend(split2.right);
-
-    Ok(Proof {
-        premises: vec![prem],
-        rule: Rule::Ex,
-        conclusion,
-    })
+        let new_proof = Proof {
+            premises,
+            conclusion: rule.get_conclusion(),
+        };
+        Ok(new_proof)
+    }
 }

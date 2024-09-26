@@ -1,16 +1,17 @@
+use super::proof_structure::Vertex;
 use std::fmt;
 
 #[derive(Debug)]
 pub enum Error {
-    EdgeNotFound(String),
-    BadLabel(String),
+    VertexNotFound(Vertex),
+    BadProof,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::EdgeNotFound(label) => write!(f, "Could not find edge {label}"),
-            Error::BadLabel(label) => write!(f, "Unexpected edge label {label}"),
+            Error::VertexNotFound(v) => write!(f, "Could not find vertex {v}"),
+            Error::BadProof => write!(f, "Proof is malformed"),
         }
     }
 }
