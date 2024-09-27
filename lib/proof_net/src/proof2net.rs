@@ -1,7 +1,8 @@
 use super::{
+    directed_multigraph::DirectedMultiGraph,
     errors::Error,
     links::{AttachContext, AttachToNet, AxLink, CutLink, ParLink, TensorLink},
-    proof_structure::{ProofStructure, VertexLabel},
+    proof_structure::{ProofStructure, RuleLabel},
 };
 use mll::{
     deduction::{Deduction, DeductionRule},
@@ -37,12 +38,12 @@ impl TryFrom<Proof> for ProofStructure {
                 let proof_right: ProofStructure = right_premise.try_into()?;
 
                 let mut new_net = proof_left;
-                new_net.disjoint_union(proof_right);
+                new_net.disjoint_union(proof_right)?;
                 let active = cut.get_active();
                 let active_left = active.first().ok_or(Error::MissingPremise)?;
                 let active_right = active.get(1).ok_or(Error::MissingPremise)?;
-                let prev_left = new_net.find_conclusion(&active_left);
-                let prev_right = new_net.find_conclusion(&active_right);
+                let prev_left = new_net.find_conclusion(active_left);
+                let prev_right = new_net.find_conclusion(active_right);
 
                 let context = AttachContext {
                     prev_left: prev_left.as_ref(),
@@ -66,15 +67,15 @@ impl TryFrom<Proof> for ProofStructure {
                 let proof_left: ProofStructure = left_premise.try_into()?;
                 let proof_right: ProofStructure = right_premise.try_into()?;
                 let mut new_net = proof_left;
-                new_net.disjoint_union(proof_right);
+                new_net.disjoint_union(proof_right)?;
 
                 let active = tensor.get_active();
                 let active_left = active.first().ok_or(Error::MissingPremise)?;
                 let active_right = active.get(1).ok_or(Error::MissingPremise)?;
 
-                let left_vert = new_net.find_conclusion(&active_left);
-                let right_vert = new_net.find_conclusion(&active_right);
-                let conc_vert = new_net.add_vertex(VertexLabel::C);
+                let left_vert = new_net.find_conclusion(active_left);
+                let right_vert = new_net.find_conclusion(active_right);
+                let conc_vert = new_net.add_vertex(new_net.fresh_label(RuleLabel::C))?;
                 let context = AttachContext {
                     prev_left: left_vert.as_ref(),
                     prev_right: right_vert.as_ref(),
@@ -98,15 +99,15 @@ impl TryFrom<Proof> for ProofStructure {
                 let proof_left: ProofStructure = left_premise.try_into()?;
                 let proof_right: ProofStructure = right_premise.try_into()?;
                 let mut new_net = proof_left;
-                new_net.disjoint_union(proof_right);
+                new_net.disjoint_union(proof_right)?;
 
                 let active = par.get_active();
                 let active_left = active.first().ok_or(Error::MissingPremise)?;
                 let active_right = active.get(1).ok_or(Error::MissingPremise)?;
 
-                let left_vert = new_net.find_conclusion(&active_left);
-                let right_vert = new_net.find_conclusion(&active_right);
-                let conc_vert = new_net.add_vertex(VertexLabel::C);
+                let left_vert = new_net.find_conclusion(active_left);
+                let right_vert = new_net.find_conclusion(active_right);
+                let conc_vert = new_net.add_vertex(new_net.fresh_label(RuleLabel::C))?;
                 let context = AttachContext {
                     prev_left: left_vert.as_ref(),
                     prev_right: right_vert.as_ref(),
