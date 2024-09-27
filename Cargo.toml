@@ -2,7 +2,7 @@
 members = [
     "lib/mll/",
     "lib/proof_net/",
-    "lib/schemes/",
+    "lib/algebra/",
     "lib/logic2geometry",
     "lib/common",
     "app"

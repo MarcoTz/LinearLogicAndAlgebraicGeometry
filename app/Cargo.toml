@@ -11,4 +11,4 @@ path = "src/main.rs"
 logic2geometry = {path="../lib/logic2geometry"}
 mll = { path="../lib/mll"}
 proof_net = { path="../lib/proof_net/"}
-schemes = {path="../lib/schemes"}
+algebra = {path="../lib/algebra"}
