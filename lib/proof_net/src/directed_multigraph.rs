@@ -23,6 +23,18 @@ pub trait DirectedMultiGraph: Default {
         label: <Self::Vertex as GraphVertex>::Label,
     ) -> Result<Self::Vertex, Self::Error>;
     fn find_vertex(&self, label: &<Self::Vertex as GraphVertex>::Label) -> Option<Self::Vertex>;
+    fn remove_vertex(
+        &mut self,
+        label: &<Self::Vertex as GraphVertex>::Label,
+    ) -> Result<(), Self::Error>;
+    fn get_outgoing(
+        &self,
+        label: &<Self::Vertex as GraphVertex>::Label,
+    ) -> Result<Vec<Self::Edge>, Self::Error>;
+    fn get_incoming(
+        &self,
+        label: &<Self::Vertex as GraphVertex>::Label,
+    ) -> Result<Vec<Self::Edge>, Self::Error>;
 
     fn get_edges(&self) -> Vec<Self::Edge>;
     fn add_edge(
@@ -32,6 +44,7 @@ pub trait DirectedMultiGraph: Default {
         label: <Self::Edge as GraphEdge>::Label,
     ) -> Result<Self::Edge, Self::Error>;
     fn find_edge(&self, label: &<Self::Edge as GraphEdge>::Label) -> Option<Self::Edge>;
+    fn remove_edge(&mut self, label: &<Self::Edge as GraphEdge>::Label) -> Result<(), Self::Error>;
 
     fn disjoint_union(&mut self, other: Self) -> Result<(), Self::Error> {
         let other_verts = other.get_vertices();

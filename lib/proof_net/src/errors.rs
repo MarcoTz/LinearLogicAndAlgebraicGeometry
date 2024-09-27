@@ -1,9 +1,11 @@
 use super::proof_structure::{RuleLabel, VertexLabel};
+use mll::formula::Formula;
 use std::fmt;
 
 #[derive(Debug)]
 pub enum Error {
     VertexNotFound(VertexLabel),
+    EdgeNotFound(Formula),
     BadProof,
     MissingPremise,
     MissingConclusion,
@@ -18,6 +20,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::VertexNotFound(v) => write!(f, "Could not find vertex {v}"),
+            Error::EdgeNotFound(e) => write!(f, "Could not find edge {e}"),
             Error::BadProof => write!(f, "Proof is malformed"),
             Error::MissingPremise => write!(f, "Expected premise, but found none"),
             Error::MissingConclusion => write!(f, "Expected conclusion, but found none"),

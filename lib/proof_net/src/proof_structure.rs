@@ -34,7 +34,7 @@ impl GraphVertex for Vertex {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Edge {
     pub from: Vertex,
     pub to: Vertex,
@@ -93,6 +93,47 @@ impl DirectedMultiGraph for ProofStructure {
             .cloned()
     }
 
+    fn remove_vertex(&mut self, label: &VertexLabel) -> Result<(), Error> {
+        let vertex = self
+            .find_vertex(label)
+            .ok_or(Error::VertexNotFound(label.to_owned()))?;
+        let incoming = self.get_incoming(label)?;
+        incoming
+            .iter()
+            .map(|e| self.remove_edge(&e.get_label()))
+            .collect::<Result<Vec<()>, Error>>()?;
+        let outgoing = self.get_outgoing(label)?;
+        outgoing
+            .iter()
+            .map(|e| self.remove_edge(&e.get_label()))
+            .collect::<Result<Vec<()>, Error>>()?;
+        self.vertices.remove(&vertex);
+        Ok(())
+    }
+
+    fn get_outgoing(&self, label: &VertexLabel) -> Result<Vec<Edge>, Error> {
+        let vert = self
+            .find_vertex(label)
+            .ok_or(Error::VertexNotFound(label.to_owned()))?;
+        Ok(self
+            .edges
+            .iter()
+            .filter(|e| e.from() == vert)
+            .cloned()
+            .collect())
+    }
+    fn get_incoming(&self, label: &VertexLabel) -> Result<Vec<Edge>, Error> {
+        let vert = self
+            .find_vertex(label)
+            .ok_or(Error::VertexNotFound(label.to_owned()))?;
+        Ok(self
+            .edges
+            .iter()
+            .filter(|e| e.to() == vert)
+            .cloned()
+            .collect())
+    }
+
     fn get_edges(&self) -> Vec<Edge> {
         self.edges.to_owned()
     }
@@ -116,6 +157,15 @@ impl DirectedMultiGraph for ProofStructure {
 
     fn find_edge(&self, label: &Formula) -> Option<Edge> {
         self.edges.iter().find(|e| e.get_label() == *label).cloned()
+    }
+
+    fn remove_edge(&mut self, label: &Formula) -> Result<(), Error> {
+        let edge = self
+            .find_edge(label)
+            .ok_or(Error::EdgeNotFound(label.to_owned()))?;
+        let ind = self.edges.iter().position(|e| *e == edge).unwrap();
+        self.edges.remove(ind);
+        Ok(())
     }
 }
 
