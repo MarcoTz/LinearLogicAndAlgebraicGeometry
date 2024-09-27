@@ -23,10 +23,21 @@ pub enum ProofLink {
 }
 
 pub struct AttachContext<'a> {
-    prev_left: Option<&'a Vertex>,
-    prev_right: Option<&'a Vertex>,
-    next_left: Option<&'a Vertex>,
-    next_right: Option<&'a Vertex>,
+    pub prev_left: Option<&'a Vertex>,
+    pub prev_right: Option<&'a Vertex>,
+    pub next_left: Option<&'a Vertex>,
+    pub next_right: Option<&'a Vertex>,
+}
+
+impl<'a> Default for AttachContext<'a> {
+    fn default() -> AttachContext<'a> {
+        AttachContext {
+            prev_left: None,
+            prev_right: None,
+            next_left: None,
+            next_right: None,
+        }
+    }
 }
 
 pub trait AttachToNet {

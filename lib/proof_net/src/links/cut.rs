@@ -11,7 +11,7 @@ pub struct CutLink {
 }
 
 impl CutLink {
-    fn new(premise: Formula) -> CutLink {
+    pub fn new(premise: Formula) -> CutLink {
         CutLink { premise }
     }
 }

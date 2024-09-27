@@ -49,8 +49,8 @@ impl ProofStructure {
         let max_ind = self
             .vertices
             .iter()
-            .max_by(|v1, v2| v1.num.cmp(&v2.num))
             .map(|v| v.num)
+            .max()
             .unwrap_or_default();
         let new_vert = Vertex {
             label,
@@ -74,6 +74,54 @@ impl ProofStructure {
         let edge = Edge { from, to, label };
         self.edges.push(edge.clone());
         Ok(edge)
+    }
+
+    pub fn disjoint_union(&mut self, other: ProofStructure) {
+        let max_ind = self
+            .vertices
+            .iter()
+            .map(|v| v.num)
+            .max()
+            .unwrap_or_default()
+            + 1;
+        let new_verts_other: Vec<Vertex> = other
+            .vertices
+            .iter()
+            .map(|v| Vertex {
+                label: v.label.clone(),
+                num: v.num + max_ind,
+            })
+            .collect();
+        self.vertices.extend(new_verts_other);
+        let new_edges_other: Vec<Edge> = other
+            .edges
+            .iter()
+            .map(|e| Edge {
+                from: Vertex {
+                    label: e.from.label.clone(),
+                    num: e.from.num + max_ind,
+                },
+                to: Vertex {
+                    label: e.to.label.clone(),
+                    num: e.to.num + max_ind,
+                },
+                label: e.label.clone(),
+            })
+            .collect();
+        self.edges.extend(new_edges_other);
+    }
+
+    pub fn find_conclusion(&self, conc: &Formula) -> Option<Vertex> {
+        let possible_edges: Vec<&Edge> =
+            self.edges.iter().filter(|edg| edg.label == *conc).collect();
+        let possible_vertices: Vec<Vertex> =
+            possible_edges.iter().map(|edg| edg.to.clone()).collect();
+        possible_vertices
+            .into_iter()
+            .filter(|v| v.label == VertexLabel::C)
+            .collect::<Vec<Vertex>>()
+            .first()
+            .cloned()
     }
 }
 

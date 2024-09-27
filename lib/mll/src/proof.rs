@@ -1,87 +1,54 @@
 use super::{
-    deduction::{Deduction, DeductionRule},
+    deduction::{Ax, Deduction, DeductionRule},
     errors::Error,
-    sequent::Sequent,
 };
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Proof {
-    conclusion: Sequent,
+    conclusion: DeductionRule,
     premises: Vec<Proof>,
 }
 
 impl Proof {
-    pub fn new(rule: DeductionRule) -> Proof {
-        let premises = rule
-            .get_premises()
-            .into_iter()
-            .map(|s| Proof {
-                conclusion: s,
-                premises: vec![],
-            })
-            .collect();
+    pub fn new(ax: Ax) -> Proof {
         Proof {
-            conclusion: rule.get_conclusion(),
-            premises,
+            premises: vec![],
+            conclusion: ax.into(),
         }
     }
 
-    pub fn extend_bottom(&mut self, rule: DeductionRule) -> Result<(), Error> {
-        let rule_premises = rule.get_premises();
-        if rule_premises.len() != 1 {
-            Err(Error::WrongNumberOfPremises {
-                expected: 1,
-                found: rule_premises.len() as i32,
-            })
-        } else {
-            Ok(())
-        }?;
-        let premise = rule_premises
-            .first()
-            .ok_or(Error::MissingPremise(self.conclusion.clone()))?;
-        if *premise == self.conclusion {
-            Ok(())
-        } else {
-            Err(Error::SequentMismatch(
-                self.conclusion.clone(),
-                premise.to_owned(),
-            ))
-        }?;
-
-        let new_premise = Proof {
-            conclusion: self.conclusion.clone(),
-            premises: self.premises.clone(),
-        };
-        self.premises = vec![new_premise];
-        self.conclusion = rule.get_conclusion();
-        Ok(())
+    pub fn conclusion(&self) -> DeductionRule {
+        self.conclusion.to_owned()
     }
 
-    pub fn combine_bottom(premises: Vec<Proof>, rule: DeductionRule) -> Result<Proof, Error> {
+    pub fn premises(&self) -> Vec<Proof> {
+        self.premises.to_owned()
+    }
+
+    pub fn combine(rule: DeductionRule, premises: Vec<Proof>) -> Result<Proof, Error> {
         let rule_premises = rule.get_premises();
         if premises.len() != rule_premises.len() {
             Err(Error::WrongNumberOfPremises {
-                expected: rule_premises.len() as i32,
                 found: premises.len() as i32,
+                expected: rule_premises.len() as i32,
             })
         } else {
             Ok(())
         }?;
-        for (proof_premise, rule_premise) in premises.iter().zip(rule_premises.iter()) {
-            if proof_premise.conclusion != *rule_premise {
+        for (rule_premise, proof_premise) in rule_premises.iter().zip(premises.iter()) {
+            let proof_conclusion = proof_premise.conclusion.get_conclusion();
+            if proof_conclusion != *rule_premise {
                 Err(Error::SequentMismatch(
-                    proof_premise.conclusion.to_owned(),
+                    proof_conclusion,
                     rule_premise.to_owned(),
                 ))
             } else {
                 Ok(())
             }?;
         }
-
-        let new_proof = Proof {
+        Ok(Proof {
+            conclusion: rule,
             premises,
-            conclusion: rule.get_conclusion(),
-        };
-        Ok(new_proof)
+        })
     }
 }
