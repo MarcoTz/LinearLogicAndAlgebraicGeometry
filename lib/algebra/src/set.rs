@@ -1,22 +1,23 @@
 use std::fmt;
 
 pub trait Set: Sized + fmt::Debug {
-    type Element: fmt::Debug;
-    fn element(&self, e: &Self::Element) -> bool;
+    type Element: fmt::Debug + PartialEq;
 }
 
-impl<T: Set> Set for (T, T) {
-    type Element = (T::Element, T::Element);
-    fn element(&self, e: &Self::Element) -> bool {
-        self.0.element(&e.0) && self.1.element(&e.1)
+impl<T: Set, U: Set> Set for (T, U) {
+    type Element = (T::Element, U::Element);
+}
+
+pub trait Subset<Super>
+where
+    Self: Set,
+    Super: Set,
+{
+    fn embed(x: Self::Element) -> <Super as Set>::Element;
+}
+
+impl<T: Set> Subset<T> for T {
+    fn embed(x: T::Element) -> T::Element {
+        x
     }
 }
-
-pub trait Function {
-    type Domain: Set;
-    type Codomain: Set;
-
-    fn apply(x: <Self::Domain as Set>::Element) -> <Self::Codomain as Set>::Element;
-}
-
-pub trait BinOp<S: Set>: Function<Domain = (S, S), Codomain = S> {}

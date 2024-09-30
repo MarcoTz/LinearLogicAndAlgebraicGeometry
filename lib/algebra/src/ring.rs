@@ -1,20 +1,25 @@
-use super::{group::Group, monoid::Monoid, set::BinOp};
-use std::error::Error;
+use super::{function::BinOp, group::Group, monoid::Monoid};
 
-pub trait Ring<Sum: BinOp<Self>, Prod: BinOp<Self>>: Group<Sum> + Monoid<Prod> {
+pub trait Ring<Prod, Sum>
+where
+    Self: Group<Sum>,
+    Self: Monoid<Prod>,
+    Prod: BinOp<Self>,
+    Sum: BinOp<Self>,
+{
+    fn add(a: Self::Element, b: Self::Element) -> Self::Element {
+        <Self as Group<Sum>>::prod(a, b)
+    }
     fn zero() -> Self::Element {
         <Self as Group<Sum>>::identity()
     }
-
+    fn mult(a: Self::Element, b: Self::Element) -> Self::Element {
+        <Self as Monoid<Prod>>::prod(a, b)
+    }
     fn one() -> Self::Element {
         <Self as Monoid<Prod>>::identity()
     }
-
-    fn sum(&self, a: Self::Element, b: Self::Element) -> Result<Self::Element, Box<dyn Error>> {
-        <Self as Group<Sum>>::prod(self, a, b)
-    }
-
-    fn prod(&self, a: Self::Element, b: Self::Element) -> Result<Self::Element, Box<dyn Error>> {
-        <Self as Monoid<Prod>>::prod(self, a, b)
+    fn neg(a: Self::Element) -> Self::Element {
+        <Self as Group<Sum>>::inverse(a)
     }
 }
