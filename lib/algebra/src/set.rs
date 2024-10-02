@@ -1,7 +1,7 @@
 use std::fmt;
 
-pub trait Set: Sized + fmt::Debug {
-    type Element: fmt::Debug + PartialEq;
+pub trait Set: Sized {
+    type Element: fmt::Debug + Clone;
 }
 
 impl<T: Set, U: Set> Set for (T, U) {

@@ -1,6 +1,6 @@
 use super::{field::Field, function::BinOp, group::Group, ring::Ring, set::Set};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ComplexNum {
     re: f32,
     im: f32,
@@ -62,5 +62,4 @@ impl Group<ComplexProd> for Complex {
 }
 
 impl Ring<ComplexProd, ComplexSum> for Complex {}
-
 impl Field<ComplexProd, ComplexSum> for Complex {}
