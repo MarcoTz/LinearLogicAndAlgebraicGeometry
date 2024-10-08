@@ -1,65 +1,65 @@
-use super::{field::Field, function::BinOp, group::Group, ring::Ring, set::Set};
+use std::{
+    fmt,
+    ops::{Add, Mul},
+};
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct ComplexNum {
-    re: f32,
-    im: f32,
+pub struct Complex {
+    pub re: f64,
+    pub im: f64,
 }
 
-impl ComplexNum {
-    fn angle(&self) -> f32 {
-        (self.im / self.re).atan()
+impl Complex {
+    pub fn arg(&self) -> f64 {
+        if self.im == 0.0 {
+            0.0
+        } else {
+            (self.re / self.im).atan()
+        }
     }
-    fn arg(&self) -> f32 {
-        (self.im * self.im + self.re * self.re).sqrt()
+
+    pub fn abs(&self) -> f64 {
+        (self.re * self.re + self.im * self.im).sqrt()
     }
-    fn from_polar(angle: f32, arg: f32) -> Self {
-        ComplexNum {
-            re: angle.sin() * arg,
-            im: angle.cos() * arg,
+
+    pub fn from_polar(abs: f64, arg: f64) -> Complex {
+        Complex {
+            re: arg.sin() * abs,
+            im: arg.cos() * abs,
         }
     }
 }
 
-#[derive(Debug)]
-pub struct Complex;
-pub struct ComplexProd;
-pub struct ComplexSum;
-
-impl Set for Complex {
-    type Element = ComplexNum;
-}
-impl BinOp<Complex> for ComplexProd {
-    fn apply(&self, a: ComplexNum, b: ComplexNum) -> ComplexNum {
-        ComplexNum {
-            re: a.re * b.re - a.im * b.im,
-            im: a.re * b.im + a.im * b.re,
-        }
-    }
-}
-impl BinOp<Complex> for ComplexSum {
-    fn apply(&self, a: ComplexNum, b: ComplexNum) -> ComplexNum {
-        ComplexNum {
-            re: a.re + b.re,
-            im: a.im + b.im,
+impl fmt::Display for Complex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.im == 0.0 {
+            self.re.fmt(f)
+        } else {
+            write!(f, "{}+i{}", self.re, self.im)
         }
     }
 }
 
-impl Group<ComplexSum> for Complex {
-    fn inverse(a: ComplexNum) -> ComplexNum {
-        ComplexNum {
-            re: -a.re,
-            im: -a.im,
+impl Add for Complex {
+    type Output = Complex;
+    fn add(self, other: Complex) -> Complex {
+        Complex {
+            re: self.re + other.re,
+            im: self.im + other.im,
         }
     }
 }
 
-impl Group<ComplexProd> for Complex {
-    fn inverse(a: ComplexNum) -> ComplexNum {
-        ComplexNum::from_polar(-a.angle(), 1.0 / a.arg())
+impl Mul for Complex {
+    type Output = Complex;
+    fn mul(self, other: Complex) -> Complex {
+        let new_abs = self.abs() * other.abs();
+        let new_arg = self.arg() + other.arg();
+        Complex::from_polar(new_abs, new_arg)
     }
 }
 
-impl Ring<ComplexProd, ComplexSum> for Complex {}
-impl Field<ComplexProd, ComplexSum> for Complex {}
+impl From<f64> for Complex {
+    fn from(re: f64) -> Complex {
+        Complex { re, im: 0.0 }
+    }
+}
