@@ -1,62 +1,94 @@
-use super::{function::BinOp, group::Group, monoid::Monoid, ring::Ring, set::Set};
-use std::{collections::HashSet, marker::PhantomData};
+use std::{
+    fmt,
+    ops::{Add, Mul},
+};
 
-pub type Variable = String;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct VariablePow {
-    pub var: Variable,
-    pub pow: i32,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Monomial<C> {
     pub coefficient: C,
-    pub vars: HashSet<VariablePow>,
+    pub powers: Vec<i32>,
 }
 
-#[derive(Debug, Clone)]
+impl<C> Monomial<C> {
+    fn same_powers(&self, other: &Monomial<C>) -> bool {
+        if self.powers.len() != other.powers.len() {
+            return false;
+        }
+        self.powers
+            .iter()
+            .zip(other.powers.iter())
+            .fold(true, |same, (self_power, other_power)| {
+                same && self_power == other_power
+            })
+    }
+}
+
 pub struct Polynomial<C> {
     pub monomials: Vec<Monomial<C>>,
 }
 
-pub struct PolynomialRing<Prod, Sum, R>
-where
-    R: Ring<Prod, Sum>,
-    Prod: BinOp<R>,
-    Sum: BinOp<R>,
-{
-    _base: R,
-    _prod: PhantomData<Prod>,
-    _sum: PhantomData<Sum>,
+impl<C: fmt::Display> fmt::Display for Monomial<C> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let var_str: Vec<String> = self
+            .powers
+            .iter()
+            .enumerate()
+            .map(|(index, power)| format!("X_{}^{}", index, power))
+            .collect();
+        write!(f, "{}{}", self.coefficient, var_str.join(","))
+    }
 }
 
-pub struct PolynomialProd;
-pub struct PolynomialSum;
+impl<C: fmt::Display> fmt::Display for Polynomial<C> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mon_str: Vec<String> = self
+            .monomials
+            .iter()
+            .map(|mon| format!("{}", mon))
+            .collect();
+        write!(f, "{}", mon_str.join(" + "))
+    }
+}
 
-impl<R, Sum, Prod> BinOp<PolynomialRing<Prod, Sum, R>> for PolynomialProd
+impl<C: Add<Output = C>> Add for Monomial<C> {
+    type Output = Polynomial<C>;
+    fn add(self, other: Self) -> Self::Output {
+        if self.same_powers(&other) {
+            Polynomial {
+                monomials: vec![Monomial {
+                    coefficient: self.coefficient + other.coefficient,
+                    powers: self.powers,
+                }],
+            }
+        } else {
+            Polynomial {
+                monomials: vec![self, other],
+            }
+        }
+    }
+}
+
+impl<C> Add for Polynomial<C>
 where
-    R: Ring<Prod, Sum>,
-    Prod: BinOp<R>,
-    Sum: BinOp<R>,
+    C: Add<Output = C>,
 {
-    fn apply(
-        &self,
-        a: Polynomial<R::Element>,
-        b: Polynomial<R::Element>,
-    ) -> Polynomial<R::Element> {
-        let mut new_monomials = vec![];
-        for mon_a in a.monomials.iter() {
-            for mon_b in b.monomials.iter() {
-                let new_vars = mon_a.vars.union(&mon_b.vars).cloned().collect();
-                let new_monomial = Monomial {
-                    coefficient: <R as Ring<Prod, Sum>>::mult(
-                        mon_a.coefficient.clone(),
-                        mon_b.coefficient.clone(),
-                    ),
-                    vars: new_vars,
-                };
-                new_monomials.push(new_monomial);
+    type Output = Polynomial<C>;
+    fn add(self, other: Self) -> Self::Output {
+        let mut new_monomials = self.monomials;
+        for other_mono in other.monomials.into_iter() {
+            match new_monomials
+                .iter()
+                .enumerate()
+                .find(|(_, mono)| mono.same_powers(&other_mono))
+            {
+                None => {
+                    new_monomials.push(other_mono);
+                }
+                Some((ind, _)) => {
+                    let old_mono = new_monomials.remove(ind);
+                    let new_poly = old_mono + other_mono;
+                    new_monomials.extend(new_poly.monomials);
+                }
             }
         }
         Polynomial {
@@ -65,86 +97,49 @@ where
     }
 }
 
-impl<R, Prod, Sum> BinOp<PolynomialRing<Prod, Sum, R>> for PolynomialSum
+impl<C> Mul for Monomial<C>
 where
-    R: Ring<Prod, Sum>,
-    Prod: BinOp<R>,
-    Sum: BinOp<R>,
+    C: Add<Output = C>,
+    C: Mul,
 {
-    fn apply(
-        &self,
-        a: Polynomial<R::Element>,
-        b: Polynomial<R::Element>,
-    ) -> Polynomial<R::Element> {
-        let mut new_poly = a;
-        for mon_b in b.monomials.iter() {
-            match new_poly
-                .monomials
-                .iter_mut()
-                .find(|mon_a| mon_a.vars == mon_b.vars)
-            {
-                None => new_poly.monomials.push(mon_b.clone()),
-                Some(a) => {
-                    a.coefficient = <R as Ring<Prod, Sum>>::add(
-                        a.coefficient.clone(),
-                        mon_b.coefficient.clone(),
-                    )
-                }
+    type Output = Monomial<<C as Mul>::Output>;
+    fn mul(self, other: Self) -> Self::Output {
+        let mut new_powers = self.powers;
+        for (ind, pow) in other.powers.iter().enumerate() {
+            match new_powers.get(ind) {
+                None => new_powers.push(*pow),
+                Some(power) => new_powers.insert(ind, power * pow),
             }
         }
-
-        new_poly
+        Monomial {
+            coefficient: self.coefficient * other.coefficient,
+            powers: new_powers,
+        }
     }
 }
-
-impl<Prod, Sum, R> Set for PolynomialRing<Prod, Sum, R>
+impl<C> Mul for Polynomial<C>
 where
-    R: Ring<Prod, Sum>,
-    Prod: BinOp<R>,
-    Sum: BinOp<R>,
+    C: Add<Output = C>,
+    C: Mul<Output = C>,
+    C: Clone,
 {
-    type Element = Polynomial<R::Element>;
-}
-
-impl<Prod, Sum, R> Monoid<PolynomialProd> for PolynomialRing<Prod, Sum, R>
-where
-    R: Ring<Prod, Sum>,
-    Prod: BinOp<R>,
-    Sum: BinOp<R>,
-{
-    fn prod(a: Polynomial<R::Element>, b: Polynomial<R::Element>) -> Polynomial<R::Element> {
-        <PolynomialProd as BinOp<PolynomialRing<Prod, Sum, R>>>::apply(&PolynomialProd {}, a, b)
-    }
-
-    fn identity() -> Polynomial<R::Element> {
+    type Output = Polynomial<C>;
+    fn mul(self, other: Self) -> Self::Output {
+        let mut new_monomials: Vec<Monomial<C>> = vec![];
+        for self_mono in self.monomials.iter() {
+            for other_mono in other.monomials.iter() {
+                let mut new_mono = self_mono.clone() * other_mono.clone();
+                if let Some(mono) = new_monomials
+                    .iter()
+                    .find(|mono| mono.same_powers(&new_mono))
+                {
+                    new_mono.coefficient = new_mono.coefficient + mono.coefficient.clone();
+                }
+                new_monomials.push(new_mono);
+            }
+        }
         Polynomial {
-            monomials: vec![Monomial {
-                coefficient: <R as Ring<Prod, Sum>>::one(),
-                vars: HashSet::new(),
-            }],
+            monomials: new_monomials,
         }
     }
-}
-
-impl<R, Prod, Sum> Group<PolynomialSum> for PolynomialRing<Prod, Sum, R>
-where
-    R: Ring<Prod, Sum>,
-    Prod: BinOp<R>,
-    Sum: BinOp<R>,
-{
-    fn inverse(a: Polynomial<R::Element>) -> Polynomial<R::Element> {
-        let mut new_poly = a;
-        for mon in new_poly.monomials.iter_mut() {
-            mon.coefficient = <R as Ring<Prod, Sum>>::neg(mon.coefficient.clone());
-        }
-        new_poly
-    }
-}
-
-impl<Prod, Sum, R> Ring<PolynomialProd, PolynomialSum> for PolynomialRing<Prod, Sum, R>
-where
-    R: Ring<Prod, Sum>,
-    Prod: BinOp<R>,
-    Sum: BinOp<R>,
-{
 }
