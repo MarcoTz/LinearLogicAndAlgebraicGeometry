@@ -27,6 +27,11 @@ impl<K: Field, const N: usize> ProjectiveScheme<K, N> {
         }
         true
     }
+    pub fn projective_space() -> ProjectiveScheme<K, N> {
+        ProjectiveScheme {
+            ideal_generators: vec![],
+        }
+    }
 }
 
 impl<K, const N: usize> fmt::Display for ProjectiveScheme<K, N>
