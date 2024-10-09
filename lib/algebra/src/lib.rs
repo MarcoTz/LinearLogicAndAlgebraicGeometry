@@ -4,6 +4,7 @@ pub mod errors;
 pub mod field;
 pub mod group;
 pub mod homogeneous_polynomial;
+pub mod monomial;
 pub mod polynomial;
 pub mod projective_scheme;
 pub mod projective_space;

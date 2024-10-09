@@ -1,8 +1,4 @@
-use super::{
-    errors::Error,
-    polynomial::{Monomial, Polynomial},
-    ring::Ring,
-};
+use super::{errors::Error, monomial::Monomial, polynomial::Polynomial, ring::Ring};
 use std::{fmt, ops::Mul};
 
 #[derive(Clone, PartialEq)]
