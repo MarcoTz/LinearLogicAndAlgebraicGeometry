@@ -1,8 +1,10 @@
-use super::{field::Field, polynomial::Polynomial, projective_space::ProjectivePoint};
+use super::{
+    field::Field, homogeneous_polynomial::HomogeneousPolynomial, projective_space::ProjectivePoint,
+};
 use std::fmt;
 
 pub struct ProjectiveScheme<K: Field, const N: usize> {
-    pub ideal_generators: Vec<Polynomial<K, N>>,
+    pub ideal_generators: Vec<HomogeneousPolynomial<K, N>>,
 }
 
 impl<K: Field, const N: usize> ProjectiveScheme<K, N> {

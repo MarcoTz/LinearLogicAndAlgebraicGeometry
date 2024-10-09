@@ -3,7 +3,9 @@ use super::{
     polynomial::{Monomial, Polynomial},
     ring::Ring,
 };
+use std::{fmt, ops::Mul};
 
+#[derive(Clone, PartialEq)]
 pub struct HomogeneousPolynomial<R: Ring, const N: usize> {
     deg: u32,
     pub monomials: Vec<Monomial<R, N>>,
@@ -12,6 +14,15 @@ pub struct HomogeneousPolynomial<R: Ring, const N: usize> {
 impl<R: Ring, const N: usize> HomogeneousPolynomial<R, N> {
     pub fn deg(&self) -> u32 {
         self.deg
+    }
+
+    pub fn eval(&self, x: [R; N]) -> R {
+        let mut res = R::zero();
+        for mono in self.monomials.iter() {
+            let eval_res = mono.eval(x.clone());
+            res = res + eval_res
+        }
+        res
     }
 }
 
@@ -46,5 +57,44 @@ impl<R: Ring, const N: usize> TryFrom<Polynomial<R, N>> for HomogeneousPolynomia
             deg,
             monomials: poly.monomials,
         })
+    }
+}
+
+impl<R: Ring, const N: usize> Mul for HomogeneousPolynomial<R, N> {
+    type Output = HomogeneousPolynomial<R, N>;
+    fn mul(self, other: HomogeneousPolynomial<R, N>) -> HomogeneousPolynomial<R, N> {
+        let new_deg = self.deg + other.deg;
+        let mut new_monomials: Vec<Monomial<R, N>> = vec![];
+        for self_mono in self.monomials.iter() {
+            for other_mono in other.monomials.iter() {
+                let mut new_mono = self_mono.clone() * other_mono.clone();
+                if let Some(mono) = new_monomials
+                    .iter()
+                    .find(|mono| mono.powers == new_mono.powers)
+                {
+                    new_mono.coefficient = new_mono.coefficient + mono.coefficient.clone();
+                }
+                new_monomials.push(new_mono);
+            }
+        }
+        HomogeneousPolynomial {
+            deg: new_deg,
+            monomials: new_monomials,
+        }
+    }
+}
+
+impl<R, const N: usize> fmt::Display for HomogeneousPolynomial<R, N>
+where
+    R: fmt::Display,
+    R: Ring,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mon_str: Vec<String> = self
+            .monomials
+            .iter()
+            .map(|mon| format!("{}", mon))
+            .collect();
+        write!(f, "{}", mon_str.join(" + "))
     }
 }
