@@ -6,8 +6,17 @@ pub struct ProjectiveScheme<K: Field, const N: usize> {
 }
 
 impl<K: Field, const N: usize> ProjectiveScheme<K, N> {
-    pub fn disjoint_union(self, _other: ProjectiveScheme<K, N>) -> ProjectiveScheme<K, N> {
-        todo!()
+    pub fn disjoint_union(self, other: ProjectiveScheme<K, N>) -> ProjectiveScheme<K, N> {
+        let mut new_polys = vec![];
+        for f in self.ideal_generators.iter() {
+            for g in other.ideal_generators.iter() {
+                let new_poly = f.clone() * g.clone();
+                new_polys.push(new_poly);
+            }
+        }
+        ProjectiveScheme {
+            ideal_generators: new_polys,
+        }
     }
 
     pub fn contains(&self, pt: &ProjectivePoint<K, N>) -> bool {
