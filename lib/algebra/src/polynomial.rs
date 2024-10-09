@@ -1,4 +1,4 @@
-use super::{errors::Error, group::Group, ring::Ring};
+use super::{errors::Error, group::AbelianGroup, ring::Ring};
 use std::{
     fmt,
     ops::{Add, Mul},
@@ -42,7 +42,7 @@ impl<C: Ring> Monomial<C> {
     }
 }
 
-impl<C: Ring> Group for Polynomial<C> {
+impl<C: Ring> AbelianGroup for Polynomial<C> {
     fn zero() -> Polynomial<C> {
         Polynomial {
             monomials: vec![Monomial {

@@ -1,7 +1,7 @@
-use super::group::Group;
+use super::group::AbelianGroup;
 use std::ops::{Add, Mul};
 
-pub trait Ring: Group + Mul<Output = Self> + Clone {
+pub trait Ring: AbelianGroup + Mul<Output = Self> + Clone {
     fn one() -> Self;
     fn pow(self, n: u32) -> Self {
         if n == 0 {

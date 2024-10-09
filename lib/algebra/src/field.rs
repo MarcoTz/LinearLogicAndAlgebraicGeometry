@@ -1,4 +1,4 @@
-use super::{errors::Error, group::Group, ring::Ring};
+use super::{errors::Error, group::AbelianGroup, ring::Ring};
 use std::ops::{Add, Mul};
 
 pub trait Field: Ring + Clone {
