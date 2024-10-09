@@ -26,8 +26,8 @@ impl<K: Field + PartialEq> PartialEq for ProjectivePoint<K> {
         let mut divisors = vec![];
         for (elem1, elem2) in self.coordinates.iter().zip(other.coordinates.iter()) {
             let new_divisor = elem1.clone().divide(elem2.clone());
-            if new_divisor.is_ok() {
-                divisors.push(new_divisor.unwrap());
+            if let Ok(div) = new_divisor {
+                divisors.push(div);
             }
         }
         divisors.windows(2).all(|elems| elems[0] == elems[1])

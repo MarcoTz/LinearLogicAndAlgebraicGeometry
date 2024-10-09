@@ -1,5 +1,5 @@
 use super::group::AbelianGroup;
-use std::ops::{Add, Mul};
+use std::ops::Mul;
 
 pub trait Ring: AbelianGroup + Mul<Output = Self> + Clone {
     fn one() -> Self;

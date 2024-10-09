@@ -7,12 +7,12 @@ pub struct ProjectiveScheme<K: Field> {
 }
 
 impl<K: Field> ProjectiveScheme<K> {
-    pub fn disjoint_union(self, other: ProjectiveScheme<K>) -> ProjectiveScheme<K> {
+    pub fn disjoint_union(self, _other: ProjectiveScheme<K>) -> ProjectiveScheme<K> {
         todo!()
     }
 
-    pub fn contains(&self, pt: &ProjectivePoint<K>) -> bool {
-        for poly in self.ideal_generators.iter() {
+    pub fn contains(&self, _pt: &ProjectivePoint<K>) -> bool {
+        for _poly in self.ideal_generators.iter() {
             todo!()
         }
         todo!()
