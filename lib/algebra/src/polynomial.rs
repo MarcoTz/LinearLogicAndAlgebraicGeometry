@@ -24,6 +24,10 @@ impl<C: Ring, const N: usize> Monomial<C, N> {
         }
         res
     }
+
+    pub fn deg(&self) -> u32 {
+        self.powers.iter().sum()
+    }
 }
 
 impl<C: Ring, const N: usize> Polynomial<C, N> {

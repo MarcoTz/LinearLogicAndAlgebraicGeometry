@@ -4,7 +4,8 @@ use std::fmt;
 pub enum Error {
     ProjectiveAllZero,
     DivisionByZero,
-    DimensionMismatch { found: i32, expected: i32 },
+    DimensionMismatch { found: u32, expected: u32 },
+    WrongDegree { found: u32, expected: u32 },
 }
 
 impl fmt::Display for Error {
@@ -17,6 +18,11 @@ impl fmt::Display for Error {
             Error::DimensionMismatch { found, expected } => {
                 write!(f, "Expected dimension {expected}, but got {found}")
             }
+            Error::WrongDegree { found, expected } => {
+                write!(f, "Expected degree {expected}, got {found}")
+            }
         }
     }
 }
+
+impl std::error::Error for Error {}
