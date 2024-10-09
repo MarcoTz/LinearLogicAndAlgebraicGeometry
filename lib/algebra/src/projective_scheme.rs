@@ -8,7 +8,10 @@ pub struct ProjectiveScheme<K: Field, const N: usize> {
 }
 
 impl<K: Field, const N: usize> ProjectiveScheme<K, N> {
-    pub fn disjoint_union(self, other: ProjectiveScheme<K, N>) -> ProjectiveScheme<K, N> {
+    pub fn disjoint_union(self, other: ProjectiveScheme<K, N>) -> ProjectiveScheme<K, N>
+    where
+        K: Clone,
+    {
         let mut new_polys = vec![];
         for f in self.ideal_generators.iter() {
             for g in other.ideal_generators.iter() {
@@ -21,7 +24,10 @@ impl<K: Field, const N: usize> ProjectiveScheme<K, N> {
         }
     }
 
-    pub fn contains(&self, pt: &ProjectivePoint<K, N>) -> bool {
+    pub fn contains(&self, pt: &ProjectivePoint<K, N>) -> bool
+    where
+        K: Clone,
+    {
         for poly in self.ideal_generators.iter() {
             if poly.eval(pt.clone().as_arr()) != K::zero() {
                 return false;

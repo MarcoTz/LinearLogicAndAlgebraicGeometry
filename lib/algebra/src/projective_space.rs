@@ -23,17 +23,18 @@ impl<K: Field, const N: usize> ProjectivePoint<K, N> {
     }
 }
 
-impl<K: Field, const N: usize> PartialEq for ProjectivePoint<K, N> {
+impl<K, const N: usize> PartialEq for ProjectivePoint<K, N>
+where
+    K: Field,
+    K: Clone,
+{
     fn eq(&self, other: &ProjectivePoint<K, N>) -> bool {
         if self.dim() != other.dim() {
             return false;
         }
         let mut divisors = vec![];
         for (elem1, elem2) in self.coordinates.iter().zip(other.coordinates.iter()) {
-            let new_divisor = elem1.clone().divide(elem2.clone());
-            if let Ok(div) = new_divisor {
-                divisors.push(div);
-            }
+            divisors.push(elem1.clone() / elem2.clone());
         }
         divisors.windows(2).all(|elems| elems[0] == elems[1])
     }

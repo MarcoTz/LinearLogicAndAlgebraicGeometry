@@ -1,7 +1,7 @@
 use super::{group::AbelianGroup, ring::Ring};
 use std::{
     fmt,
-    ops::{Add, Mul},
+    ops::{Add, Mul, Neg},
 };
 
 #[derive(Clone, PartialEq)]
@@ -16,7 +16,10 @@ pub struct Polynomial<C: Ring, const N: usize> {
 }
 
 impl<C: Ring, const N: usize> Monomial<C, N> {
-    pub fn eval(&self, x: [C; N]) -> C {
+    pub fn eval(&self, x: [C; N]) -> C
+    where
+        C: Clone,
+    {
         let mut res = self.coefficient.clone();
         for (next_pow, next_x) in self.powers.iter().zip(x.iter()) {
             let x_pow = next_x.clone().pow(*next_pow);
@@ -31,7 +34,10 @@ impl<C: Ring, const N: usize> Monomial<C, N> {
 }
 
 impl<C: Ring, const N: usize> Polynomial<C, N> {
-    pub fn eval(&self, x: [C; N]) -> C {
+    pub fn eval(&self, x: [C; N]) -> C
+    where
+        C: Clone,
+    {
         let mut res = C::zero();
         for mono in self.monomials.iter() {
             let eval_res = mono.eval(x.clone());
@@ -50,22 +56,13 @@ impl<C: Ring, const N: usize> AbelianGroup for Polynomial<C, N> {
             }],
         }
     }
-    fn neg(self) -> Polynomial<C, N> {
-        let neg_monos = self
-            .monomials
-            .into_iter()
-            .map(|mono| Monomial {
-                coefficient: mono.coefficient.neg(),
-                powers: mono.powers,
-            })
-            .collect();
-        Polynomial {
-            monomials: neg_monos,
-        }
-    }
 }
 
-impl<C: Ring, const N: usize> Ring for Polynomial<C, N> {
+impl<C, const N: usize> Ring for Polynomial<C, N>
+where
+    C: Ring,
+    C: Clone,
+{
     fn one() -> Polynomial<C, N> {
         Polynomial {
             monomials: vec![Monomial {
@@ -104,6 +101,24 @@ where
             .map(|mon| format!("{}", mon))
             .collect();
         write!(f, "{}", mon_str.join(" + "))
+    }
+}
+
+impl<C: Ring, const N: usize> Neg for Monomial<C, N> {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Monomial {
+            coefficient: -self.coefficient,
+            powers: self.powers,
+        }
+    }
+}
+
+impl<C: Ring, const N: usize> Neg for Polynomial<C, N> {
+    type Output = Self;
+    fn neg(self) -> Self {
+        let monomials = self.monomials.into_iter().map(|mono| -mono).collect();
+        Polynomial { monomials }
     }
 }
 
@@ -183,6 +198,7 @@ where
     C: Add<Output = C>,
     C: Mul<Output = C>,
     C: Ring,
+    C: Clone,
 {
     type Output = Polynomial<C, N>;
     fn mul(self, other: Self) -> Self::Output {

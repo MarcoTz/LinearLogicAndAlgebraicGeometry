@@ -16,7 +16,10 @@ impl<R: Ring, const N: usize> HomogeneousPolynomial<R, N> {
         self.deg
     }
 
-    pub fn eval(&self, x: [R; N]) -> R {
+    pub fn eval(&self, x: [R; N]) -> R
+    where
+        R: Clone,
+    {
         let mut res = R::zero();
         for mono in self.monomials.iter() {
             let eval_res = mono.eval(x.clone());
@@ -60,7 +63,11 @@ impl<R: Ring, const N: usize> TryFrom<Polynomial<R, N>> for HomogeneousPolynomia
     }
 }
 
-impl<R: Ring, const N: usize> Mul for HomogeneousPolynomial<R, N> {
+impl<R, const N: usize> Mul for HomogeneousPolynomial<R, N>
+where
+    R: Ring,
+    R: Clone,
+{
     type Output = HomogeneousPolynomial<R, N>;
     fn mul(self, other: HomogeneousPolynomial<R, N>) -> HomogeneousPolynomial<R, N> {
         let new_deg = self.deg + other.deg;

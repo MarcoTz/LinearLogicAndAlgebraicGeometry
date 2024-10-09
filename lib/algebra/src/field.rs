@@ -1,13 +1,7 @@
-use super::{errors::Error, ring::Ring};
+use super::ring::Ring;
+use std::ops::Div;
 
-pub trait Field: Ring + Clone {
+pub trait Field: Ring + Div<Output = Self> {
     fn one() -> Self;
     fn inverse(self) -> Self;
-    fn divide(self, other: Self) -> Result<Self, Error> {
-        if self == Self::zero() {
-            Err(Error::DivisionByZero)
-        } else {
-            Ok(self * other.inverse())
-        }
-    }
 }

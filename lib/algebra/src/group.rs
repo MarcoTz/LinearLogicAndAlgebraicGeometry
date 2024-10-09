@@ -1,8 +1,13 @@
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Neg};
 
-pub trait AbelianGroup: Add<Output = Self> + PartialEq + Sized {
+pub trait AbelianGroup
+where
+    Self: Add<Output = Self>,
+    Self: Neg<Output = Self>,
+    Self: PartialEq,
+    Self: Sized,
+{
     fn zero() -> Self;
-    fn neg(self) -> Self;
 }
 
 pub trait Group: Mul<Output = Self> + PartialEq + Sized {
