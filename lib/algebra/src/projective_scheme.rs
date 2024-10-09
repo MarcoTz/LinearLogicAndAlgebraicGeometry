@@ -1,25 +1,26 @@
 use super::{field::Field, polynomial::Polynomial, projective_space::ProjectivePoint};
 use std::fmt;
 
-pub struct ProjectiveScheme<K: Field> {
-    pub ambient_dim: i32,
-    pub ideal_generators: Vec<Polynomial<K>>,
+pub struct ProjectiveScheme<K: Field, const N: usize> {
+    pub ideal_generators: Vec<Polynomial<K, N>>,
 }
 
-impl<K: Field> ProjectiveScheme<K> {
-    pub fn disjoint_union(self, _other: ProjectiveScheme<K>) -> ProjectiveScheme<K> {
+impl<K: Field, const N: usize> ProjectiveScheme<K, N> {
+    pub fn disjoint_union(self, _other: ProjectiveScheme<K, N>) -> ProjectiveScheme<K, N> {
         todo!()
     }
 
-    pub fn contains(&self, _pt: &ProjectivePoint<K>) -> bool {
-        for _poly in self.ideal_generators.iter() {
-            todo!()
+    pub fn contains(&self, pt: &ProjectivePoint<K, N>) -> bool {
+        for poly in self.ideal_generators.iter() {
+            if poly.eval(pt.clone().as_arr()) != K::zero() {
+                return false;
+            }
         }
-        todo!()
+        true
     }
 }
 
-impl<K> fmt::Display for ProjectiveScheme<K>
+impl<K, const N: usize> fmt::Display for ProjectiveScheme<K, N>
 where
     K: Field,
     K: fmt::Display,
@@ -30,6 +31,6 @@ where
             .iter()
             .map(|poly| format!("{}", poly))
             .collect();
-        write!(f, "P^{}/<{}>", self.ambient_dim, ideal_str.join(", "))
+        write!(f, "P^{}/<{}>", N, ideal_str.join(", "))
     }
 }

@@ -1,11 +1,12 @@
 use super::{errors::Error, field::Field};
 
-pub struct ProjectivePoint<K: Field> {
-    coordinates: Vec<K>,
+#[derive(Clone)]
+pub struct ProjectivePoint<K: Field, const N: usize> {
+    coordinates: [K; N],
 }
 
-impl<K: Field> ProjectivePoint<K> {
-    pub fn new(coordinates: Vec<K>) -> Result<Self, Error> {
+impl<K: Field, const N: usize> ProjectivePoint<K, N> {
+    pub fn new(coordinates: [K; N]) -> Result<Self, Error> {
         if coordinates.iter().all(|elem| *elem == K::zero()) {
             Err(Error::ProjectiveAllZero)
         } else {
@@ -16,10 +17,14 @@ impl<K: Field> ProjectivePoint<K> {
     pub fn dim(&self) -> i32 {
         self.coordinates.len() as i32 - 1
     }
+
+    pub fn as_arr(self) -> [K; N] {
+        self.coordinates
+    }
 }
 
-impl<K: Field + PartialEq> PartialEq for ProjectivePoint<K> {
-    fn eq(&self, other: &ProjectivePoint<K>) -> bool {
+impl<K: Field, const N: usize> PartialEq for ProjectivePoint<K, N> {
+    fn eq(&self, other: &ProjectivePoint<K, N>) -> bool {
         if self.dim() != other.dim() {
             return false;
         }
