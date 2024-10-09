@@ -1,15 +1,21 @@
+use super::{errors::Error, group::Group, ring::Ring};
 use std::{
     fmt,
     ops::{Add, Mul},
 };
 
-#[derive(Clone)]
-pub struct Monomial<C> {
+#[derive(Clone, PartialEq)]
+pub struct Monomial<C: Ring> {
     pub coefficient: C,
-    pub powers: Vec<i32>,
+    pub powers: Vec<u32>,
 }
 
-impl<C> Monomial<C> {
+#[derive(PartialEq, Clone)]
+pub struct Polynomial<C: Ring> {
+    pub monomials: Vec<Monomial<C>>,
+}
+
+impl<C: Ring> Monomial<C> {
     fn same_powers(&self, other: &Monomial<C>) -> bool {
         if self.powers.len() != other.powers.len() {
             return false;
@@ -21,13 +27,60 @@ impl<C> Monomial<C> {
                 same && self_power == other_power
             })
     }
+
+    pub fn eval(&self, x: Vec<C>) -> Result<C, Error> {
+        let mut res = self.coefficient.clone();
+        for (ind, power) in self.powers.iter().enumerate() {
+            let next_x = x.get(ind).ok_or(Error::DimensionMismatch {
+                found: x.len() as i32,
+                expected: self.powers.len() as i32,
+            })?;
+            let x_pow = next_x.clone().pow(*power);
+            res = res.add(x_pow);
+        }
+        Ok(res)
+    }
 }
 
-pub struct Polynomial<C> {
-    pub monomials: Vec<Monomial<C>>,
+impl<C: Ring> Group for Polynomial<C> {
+    fn zero() -> Polynomial<C> {
+        Polynomial {
+            monomials: vec![Monomial {
+                coefficient: C::zero(),
+                powers: vec![],
+            }],
+        }
+    }
+    fn neg(self) -> Polynomial<C> {
+        let neg_monos = self
+            .monomials
+            .into_iter()
+            .map(|mono| Monomial {
+                coefficient: mono.coefficient.neg(),
+                powers: mono.powers,
+            })
+            .collect();
+        Polynomial {
+            monomials: neg_monos,
+        }
+    }
+}
+impl<C: Ring> Ring for Polynomial<C> {
+    fn one() -> Polynomial<C> {
+        Polynomial {
+            monomials: vec![Monomial {
+                coefficient: C::one(),
+                powers: vec![],
+            }],
+        }
+    }
 }
 
-impl<C: fmt::Display> fmt::Display for Monomial<C> {
+impl<C> fmt::Display for Monomial<C>
+where
+    C: Ring,
+    C: fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let var_str: Vec<String> = self
             .powers
@@ -39,7 +92,11 @@ impl<C: fmt::Display> fmt::Display for Monomial<C> {
     }
 }
 
-impl<C: fmt::Display> fmt::Display for Polynomial<C> {
+impl<C> fmt::Display for Polynomial<C>
+where
+    C: fmt::Display,
+    C: Ring,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mon_str: Vec<String> = self
             .monomials
@@ -50,7 +107,11 @@ impl<C: fmt::Display> fmt::Display for Polynomial<C> {
     }
 }
 
-impl<C: Add<Output = C>> Add for Monomial<C> {
+impl<C> Add for Monomial<C>
+where
+    C: Ring,
+    C: Add<Output = C>,
+{
     type Output = Polynomial<C>;
     fn add(self, other: Self) -> Self::Output {
         if self.same_powers(&other) {
@@ -71,6 +132,7 @@ impl<C: Add<Output = C>> Add for Monomial<C> {
 impl<C> Add for Polynomial<C>
 where
     C: Add<Output = C>,
+    C: Ring,
 {
     type Output = Polynomial<C>;
     fn add(self, other: Self) -> Self::Output {
@@ -100,7 +162,8 @@ where
 impl<C> Mul for Monomial<C>
 where
     C: Add<Output = C>,
-    C: Mul,
+    C: Mul<Output = C>,
+    C: Ring,
 {
     type Output = Monomial<<C as Mul>::Output>;
     fn mul(self, other: Self) -> Self::Output {
@@ -117,11 +180,12 @@ where
         }
     }
 }
+
 impl<C> Mul for Polynomial<C>
 where
     C: Add<Output = C>,
     C: Mul<Output = C>,
-    C: Clone,
+    C: Ring,
 {
     type Output = Polynomial<C>;
     fn mul(self, other: Self) -> Self::Output {

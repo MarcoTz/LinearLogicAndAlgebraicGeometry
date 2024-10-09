@@ -1,52 +1,56 @@
 use super::{errors::Error, group::Group, ring::Ring};
+use std::ops::{Add, Mul};
 
-pub trait Field: Sized + PartialEq + Clone {
-    fn zero() -> Self;
-    fn neg(self) -> Self;
-    fn add(self, other: Self) -> Self;
-
+pub trait Field: Ring + Clone {
     fn one() -> Self;
-    fn mult(self, other: Self) -> Self;
     fn inverse(self) -> Self;
     fn divide(self, other: Self) -> Result<Self, Error> {
         if self == Self::zero() {
             Err(Error::DivisionByZero)
         } else {
-            Ok(self.mult(other.inverse()))
+            Ok(self * other.inverse())
         }
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct AsRing<T: Field> {
     elem: T,
 }
 
-impl<T: Field> Ring for AsRing<T> {
+impl<T: Field> Add for AsRing<T> {
+    type Output = AsRing<T>;
+    fn add(self, other: AsRing<T>) -> Self {
+        AsRing {
+            elem: self.elem + other.elem,
+        }
+    }
+}
+impl<T: Field> Mul for AsRing<T> {
+    type Output = AsRing<T>;
+    fn mul(self, other: Self) -> Self {
+        AsRing {
+            elem: self.elem * other.elem,
+        }
+    }
+}
+
+impl<T: Field> Group for AsRing<T> {
     fn zero() -> Self {
         AsRing {
-            elem: <T as Field>::zero(),
+            elem: <T as Group>::zero(),
         }
     }
     fn neg(self) -> Self {
         AsRing {
-            elem: <T as Field>::neg(self.elem),
+            elem: self.elem.neg(),
         }
     }
-    fn add(self, other: AsRing<T>) -> Self {
-        AsRing {
-            elem: <T as Field>::add(self.elem, other.elem),
-        }
-    }
-
+}
+impl<T: Field> Ring for AsRing<T> {
     fn one() -> Self {
         AsRing {
             elem: <T as Field>::one(),
-        }
-    }
-    fn mult(self, other: Self) -> Self {
-        AsRing {
-            elem: <T as Field>::mult(self.elem, other.elem),
         }
     }
 }
@@ -62,21 +66,24 @@ pub struct AsAdditiveGroup<T: Field> {
     elem: T,
 }
 
+impl<T: Field> Add for AsAdditiveGroup<T> {
+    type Output = AsAdditiveGroup<T>;
+    fn add(self, other: Self) -> Self {
+        AsAdditiveGroup {
+            elem: self.elem + other.elem,
+        }
+    }
+}
+
 impl<T: Field> Group for AsAdditiveGroup<T> {
     fn zero() -> Self {
         AsAdditiveGroup {
-            elem: <T as Field>::zero(),
+            elem: <T as Group>::zero(),
         }
     }
     fn neg(self) -> Self {
         AsAdditiveGroup {
-            elem: <T as Field>::neg(self.elem),
-        }
-    }
-
-    fn add(self, other: Self) -> Self {
-        AsAdditiveGroup {
-            elem: <T as Field>::add(self.elem, other.elem),
+            elem: <T as Group>::neg(self.elem),
         }
     }
 }
