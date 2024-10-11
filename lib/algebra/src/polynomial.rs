@@ -1,4 +1,7 @@
-use super::{group::AbelianGroup, monomial::Monomial, ring::Ring};
+use super::{
+    graded_ring::GradedRing, group::AbelianGroup, homogeneous_polynomial::HomogeneousPolynomial,
+    monomial::Monomial, ring::Ring,
+};
 use std::{
     fmt,
     ops::{Add, Mul, Neg},
@@ -127,5 +130,22 @@ where
         Polynomial {
             monomials: new_monomials,
         }
+    }
+}
+
+impl<C, const N: usize> GradedRing for Polynomial<C, N>
+where
+    C: Clone,
+    C: Ring,
+{
+    fn is_homogeneous(&self) -> bool {
+        <Polynomial<C, N> as TryInto<HomogeneousPolynomial<C, N>>>::try_into(self.to_owned())
+            .is_ok()
+    }
+
+    fn degree(&self) -> Option<u32> {
+        <Polynomial<C, N> as TryInto<HomogeneousPolynomial<C, N>>>::try_into(self.to_owned())
+            .map(|f| Some(f.deg()))
+            .unwrap_or_default()
     }
 }
