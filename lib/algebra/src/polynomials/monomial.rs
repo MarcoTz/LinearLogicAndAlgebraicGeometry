@@ -1,5 +1,5 @@
 use super::polynomial::Polynomial;
-use crate::{errors::Error, field::Field, projective_morphism::ProjectiveMorphism, ring::Ring};
+use crate::{errors::Error, field::Field, projective::ProjectiveMorphism, ring::Ring};
 use std::{
     fmt,
     ops::{Add, Mul, Neg},

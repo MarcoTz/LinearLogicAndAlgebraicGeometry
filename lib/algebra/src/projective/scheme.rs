@@ -1,7 +1,6 @@
-use super::{
-    errors::Error, field::Field, polynomials::HomogeneousPolynomial,
-    projective_space::ProjectivePoint,
-};
+use super::ProjectivePoint;
+use crate::{errors::Error, field::Field, polynomials::HomogeneousPolynomial};
+
 use std::fmt;
 
 pub struct ProjectiveScheme<K: Field> {

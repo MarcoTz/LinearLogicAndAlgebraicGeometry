@@ -1,4 +1,4 @@
-use super::{errors::Error, field::Field};
+use crate::{errors::Error, field::Field};
 
 #[derive(Clone)]
 pub struct ProjectivePoint<K: Field> {

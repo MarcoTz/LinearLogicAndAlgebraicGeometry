@@ -6,7 +6,5 @@ pub mod graded_ring;
 pub mod group;
 pub mod ideal;
 pub mod polynomials;
-pub mod projective_morphism;
-pub mod projective_scheme;
-pub mod projective_space;
+pub mod projective;
 pub mod ring;

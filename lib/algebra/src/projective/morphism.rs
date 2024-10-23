@@ -1,7 +1,5 @@
-use super::{
-    errors::Error, field::Field, polynomials::HomogeneousPolynomial,
-    projective_space::ProjectivePoint,
-};
+use super::ProjectivePoint;
+use crate::{errors::Error, field::Field, polynomials::HomogeneousPolynomial};
 
 #[derive(Clone)]
 pub struct ProjectiveMorphism<K: Field> {
