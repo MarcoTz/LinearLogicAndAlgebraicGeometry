@@ -1,5 +1,5 @@
 use super::{
-    errors::Error, field::Field, homogeneous_polynomial::HomogeneousPolynomial,
+    errors::Error, field::Field, polynomials::HomogeneousPolynomial,
     projective_space::ProjectivePoint,
 };
 

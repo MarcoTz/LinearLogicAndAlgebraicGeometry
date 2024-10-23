@@ -1,7 +1,5 @@
-use super::{
-    errors::Error, graded_ring::GradedRing, group::AbelianGroup,
-    homogeneous_polynomial::HomogeneousPolynomial, monomial::Monomial, ring::Ring,
-};
+use super::{homogeneous_polynomial::HomogeneousPolynomial, monomial::Monomial};
+use crate::{errors::Error, graded_ring::GradedRing, group::AbelianGroup, ring::Ring};
 use std::{
     fmt,
     ops::{Add, Mul, Neg},

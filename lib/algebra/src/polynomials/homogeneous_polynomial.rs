@@ -1,7 +1,5 @@
-use super::{
-    errors::Error, field::Field, monomial::Monomial, polynomial::Polynomial,
-    projective_morphism::ProjectiveMorphism, ring::Ring,
-};
+use super::{monomial::Monomial, polynomial::Polynomial};
+use crate::{errors::Error, field::Field, projective_morphism::ProjectiveMorphism, ring::Ring};
 use std::{fmt, ops::Mul};
 
 #[derive(Clone, PartialEq)]
