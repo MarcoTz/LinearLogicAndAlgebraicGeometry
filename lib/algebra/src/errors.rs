@@ -4,8 +4,8 @@ use std::fmt;
 pub enum Error {
     ProjectiveAllZero,
     DivisionByZero,
-    DimensionMismatch { found: u32, expected: u32 },
-    WrongDegree { found: u32, expected: u32 },
+    DimensionMismatch { found: usize, expected: usize },
+    WrongDegree { found: usize, expected: usize },
 }
 
 impl fmt::Display for Error {

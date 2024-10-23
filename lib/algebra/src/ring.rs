@@ -15,7 +15,7 @@ where
     fn one() -> Self;
     /// x^n
     /// requires cloning elements
-    fn pow(self, n: u32) -> Self
+    fn pow(self, n: usize) -> Self
     where
         Self: Clone,
     {

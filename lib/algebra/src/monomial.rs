@@ -1,5 +1,6 @@
 use super::{
-    field::Field, polynomial::Polynomial, projective_morphism::ProjectiveMorphism, ring::Ring,
+    errors::Error, field::Field, polynomial::Polynomial, projective_morphism::ProjectiveMorphism,
+    ring::Ring,
 };
 use std::{
     fmt,
@@ -7,65 +8,95 @@ use std::{
 };
 
 #[derive(Clone, PartialEq)]
-pub struct Monomial<C: Ring, const N: usize> {
+pub struct Monomial<C: Ring> {
+    dim: usize,
     pub coefficient: C,
-    pub powers: [u32; N],
+    powers: Vec<usize>,
 }
 
-impl<C: Ring, const N: usize> Monomial<C, N> {
-    pub fn eval(&self, x: [C; N]) -> C
+impl<C: Ring> Monomial<C> {
+    pub fn new(coefficient: C, powers: Vec<usize>) -> Monomial<C> {
+        Monomial {
+            dim: powers.len(),
+            coefficient,
+            powers,
+        }
+    }
+
+    pub fn powers(&self) -> Vec<usize> {
+        self.powers.clone()
+    }
+
+    pub fn dim(&self) -> usize {
+        self.dim
+    }
+
+    pub fn eval(&self, x: Vec<C>) -> Result<C, Error>
     where
         C: Clone,
     {
+        if self.dim != x.len() {
+            Err(Error::DimensionMismatch {
+                found: x.len(),
+                expected: self.dim,
+            })
+        } else {
+            Ok(())
+        }?;
+
         let mut res = self.coefficient.clone();
         for (next_pow, next_x) in self.powers.iter().zip(x.iter()) {
             let x_pow = next_x.clone().pow(*next_pow);
             res = res + x_pow;
         }
-        res
+        Ok(res)
     }
 
-    pub fn deg(&self) -> u32 {
+    pub fn deg(&self) -> usize {
         self.powers.iter().sum()
     }
 
-    pub fn compose_monomial<const M: usize>(self, other: Monomial<C, M>) -> Monomial<C, M>
+    pub fn compose_monomial(self, other: Monomial<C>) -> Monomial<C>
     where
         C: Clone,
     {
-        let new_powers = other.powers.map(|pow| pow * self.deg());
-        Monomial {
-            coefficient: self.coefficient * other.coefficient.pow(N as u32),
-            powers: new_powers,
-        }
+        let new_powers = other
+            .powers
+            .into_iter()
+            .map(|pow| pow * self.deg())
+            .collect();
+        Monomial::new(
+            self.coefficient * other.coefficient.pow(self.dim),
+            new_powers,
+        )
     }
 
-    pub fn compose_morphism<const M: usize>(
+    pub fn compose_morphism(
         self,
-        morphism: ProjectiveMorphism<C, M, N>,
-    ) -> Polynomial<C, M>
+        morphism: ProjectiveMorphism<C>, //, M, N>,
+    ) -> Result<Polynomial<C>, Error>
+    //M
     where
         C: Field + Clone,
     {
-        let mut res = Polynomial { monomials: vec![] };
-        for j in 0..N {
-            for mono in morphism.coordinate_functions[j].monomials.iter() {
+        let mut res = Polynomial::new(vec![]);
+        for j in 0..self.dim {
+            let nth_coordinate = morphism.nth_coordinate(j)?;
+            for mono in nth_coordinate.monomials() {
                 res = res + self.clone().compose_monomial(mono.clone()).into();
             }
         }
-        res
+        Ok(res)
     }
 }
 
-impl<C: Ring, const N: usize> From<Monomial<C, N>> for Polynomial<C, N> {
-    fn from(mono: Monomial<C, N>) -> Polynomial<C, N> {
-        Polynomial {
-            monomials: vec![mono],
-        }
+impl<C: Ring> From<Monomial<C>> for Polynomial<C> {
+    fn from(mono: Monomial<C>) -> Polynomial<C> {
+        Polynomial::new(vec![mono])
     }
 }
 
-impl<C, const N: usize> fmt::Display for Monomial<C, N>
+impl<C> fmt::Display for Monomial<C>
 where
     C: Ring,
     C: fmt::Display,
@@ -80,51 +111,43 @@ where
         write!(f, "{}{}", self.coefficient, var_str.join(""))
     }
 }
-impl<C: Ring, const N: usize> Neg for Monomial<C, N> {
+impl<C: Ring> Neg for Monomial<C> {
     type Output = Self;
     fn neg(self) -> Self {
-        Monomial {
-            coefficient: -self.coefficient,
-            powers: self.powers,
-        }
+        Monomial::new(-self.coefficient, self.powers)
     }
 }
-impl<C, const N: usize> Add for Monomial<C, N>
+
+impl<C> Add for Monomial<C>
 where
     C: Ring,
     C: Add<Output = C>,
 {
-    type Output = Polynomial<C, N>;
+    type Output = Polynomial<C>;
     fn add(self, other: Self) -> Self::Output {
         if self.powers == other.powers {
-            Polynomial {
-                monomials: vec![Monomial {
-                    coefficient: self.coefficient + other.coefficient,
-                    powers: self.powers,
-                }],
-            }
+            Polynomial::new(vec![Monomial::new(
+                self.coefficient + other.coefficient,
+                self.powers,
+            )])
         } else {
-            Polynomial {
-                monomials: vec![self, other],
-            }
+            Polynomial::new(vec![self, other])
         }
     }
 }
-impl<C, const N: usize> Mul for Monomial<C, N>
+
+impl<C> Mul for Monomial<C>
 where
     C: Add<Output = C>,
     C: Mul<Output = C>,
     C: Ring,
 {
-    type Output = Monomial<<C as Mul>::Output, N>;
+    type Output = Monomial<<C as Mul>::Output>;
     fn mul(self, other: Self) -> Self::Output {
-        let mut new_powers = [0; N];
-        for (i, power) in new_powers.iter_mut().enumerate().take(N + 1) {
-            *power = self.powers[i] + other.powers[i];
+        let mut new_powers = vec![];
+        for i in 0..self.dim {
+            new_powers.push(self.powers[i] + other.powers[i]);
         }
-        Monomial {
-            coefficient: self.coefficient * other.coefficient,
-            powers: new_powers,
-        }
+        Monomial::new(self.coefficient * other.coefficient, new_powers)
     }
 }

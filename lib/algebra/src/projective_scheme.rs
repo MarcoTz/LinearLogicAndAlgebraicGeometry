@@ -1,14 +1,60 @@
 use super::{
-    field::Field, homogeneous_polynomial::HomogeneousPolynomial, projective_space::ProjectivePoint,
+    errors::Error, field::Field, homogeneous_polynomial::HomogeneousPolynomial,
+    projective_space::ProjectivePoint,
 };
 use std::fmt;
 
-pub struct ProjectiveScheme<K: Field, const N: usize> {
-    pub ideal_generators: Vec<HomogeneousPolynomial<K, N>>,
+pub struct ProjectiveScheme<K: Field> {
+    dim: usize,
+    ideal_generators: Vec<HomogeneousPolynomial<K>>,
 }
 
-impl<K: Field, const N: usize> ProjectiveScheme<K, N> {
-    pub fn disjoint_union(self, other: ProjectiveScheme<K, N>) -> ProjectiveScheme<K, N>
+impl<K: Field> ProjectiveScheme<K> {
+    pub fn new(
+        ideal_generators: Vec<HomogeneousPolynomial<K>>,
+    ) -> Result<ProjectiveScheme<K>, Error> {
+        let (dim, deg) = match ideal_generators.first() {
+            None => {
+                return Ok(ProjectiveScheme {
+                    dim: 0,
+                    ideal_generators: vec![],
+                })
+            }
+            Some(poly) => (poly.dim(), poly.deg()),
+        };
+        if ideal_generators.iter().all(|poly| poly.deg() == deg) {
+            Ok(())
+        } else {
+            Err(Error::WrongDegree {
+                expected: deg,
+                found: ideal_generators
+                    .iter()
+                    .find(|poly| poly.deg() != deg)
+                    .unwrap()
+                    .deg(),
+            })
+        }?;
+
+        if ideal_generators.iter().all(|poly| poly.dim() == dim) {
+            Ok(())
+        } else {
+            Err(Error::DimensionMismatch {
+                expected: dim,
+                found: ideal_generators
+                    .iter()
+                    .find(|poly| poly.dim() != dim)
+                    .unwrap()
+                    .dim(),
+            })
+        }?;
+
+        Ok(ProjectiveScheme {
+            dim,
+            ideal_generators,
+        })
+    }
+
+    pub fn disjoint_union(self, other: ProjectiveScheme<K>) -> ProjectiveScheme<K>
     where
         K: Clone,
     {
@@ -19,30 +65,37 @@ impl<K: Field, const N: usize> ProjectiveScheme<K, N> {
                 new_polys.push(new_poly);
             }
         }
-        ProjectiveScheme {
-            ideal_generators: new_polys,
-        }
+        ProjectiveScheme::new(new_polys).unwrap()
     }
 
-    pub fn contains(&self, pt: &ProjectivePoint<K, N>) -> bool
+    pub fn product(self, other: &ProjectiveScheme<K>) -> ProjectiveScheme<K> {
+        todo!()
+    }
+
+    pub fn contains(&self, pt: &ProjectivePoint<K>) -> Result<bool, Error>
     where
         K: Clone,
     {
+        if pt.dim() != self.dim {
+            Err(Error::DimensionMismatch {
+                expected: self.dim,
+                found: pt.dim(),
+            })
+        } else {
+            Ok(())
+        }?;
+
         for poly in self.ideal_generators.iter() {
-            if poly.eval(pt.clone().as_arr()) != K::zero() {
-                return false;
+            let eval_res = poly.eval(pt.clone().as_arr())?;
+            if eval_res != K::zero() {
+                return Ok(false);
             }
         }
-        true
-    }
-    pub fn projective_space() -> ProjectiveScheme<K, N> {
-        ProjectiveScheme {
-            ideal_generators: vec![],
-        }
+        Ok(true)
     }
 }
 
-impl<K, const N: usize> fmt::Display for ProjectiveScheme<K, N>
+impl<K> fmt::Display for ProjectiveScheme<K>
 where
     K: Field,
     K: fmt::Display,
@@ -53,6 +106,6 @@ where
             .iter()
             .map(|poly| format!("{}", poly))
             .collect();
-        write!(f, "P^{}/<{}>", N, ideal_str.join(", "))
+        write!(f, "P^{}/<{}>", self.dim, ideal_str.join(", "))
     }
 }

@@ -7,5 +7,5 @@ use super::ring::Ring;
 /// in this case degree shoud return i, otherwise None
 pub trait GradedRing: Ring {
     fn is_homogeneous(&self) -> bool;
-    fn degree(&self) -> Option<u32>;
+    fn degree(&self) -> Option<usize>;
 }

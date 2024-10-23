@@ -2,25 +2,49 @@ use super::{
     errors::Error, field::Field, homogeneous_polynomial::HomogeneousPolynomial,
     projective_space::ProjectivePoint,
 };
-use std::array::from_fn;
 
 #[derive(Clone)]
-pub struct ProjectiveMorphism<K: Field, const N: usize, const M: usize> {
-    pub coordinate_functions: [HomogeneousPolynomial<K, N>; M],
+pub struct ProjectiveMorphism<K: Field> {
+    dim_domain: usize,
+    dim_codomain: usize,
+    coordinate_functions: Vec<HomogeneousPolynomial<K>>,
 }
 
-impl<K, const N: usize, const M: usize> ProjectiveMorphism<K, N, M>
+impl<K> ProjectiveMorphism<K>
 where
     K: Field,
 {
-    pub fn eval(&self, pt: ProjectivePoint<K, N>) -> Result<ProjectivePoint<K, M>, Error>
+    pub fn eval(&self, pt: ProjectivePoint<K>) -> Result<ProjectivePoint<K>, Error>
     where
         K: Clone,
     {
-        let mut new_coordinates = from_fn(|_| K::zero());
-        for i in 1..M {
-            new_coordinates[i] = self.coordinate_functions[i].eval(pt.clone().as_arr());
+        if pt.dim() != self.dim_domain {
+            Err(Error::DimensionMismatch {
+                found: pt.dim(),
+                expected: self.dim_domain,
+            })
+        } else {
+            Ok(())
+        }?;
+
+        let mut new_coordinates = vec![];
+        for fun in self.coordinate_functions.iter() {
+            new_coordinates.push(fun.eval(pt.clone().as_arr())?);
         }
+
         ProjectivePoint::new(new_coordinates)
+    }
+
+    pub fn nth_coordinate(&self, n: usize) -> Result<HomogeneousPolynomial<K>, Error>
+    where
+        K: Clone,
+    {
+        self.coordinate_functions
+            .get(n)
+            .cloned()
+            .ok_or(Error::DimensionMismatch {
+                expected: self.dim_domain,
+                found: n,
+            })
     }
 }

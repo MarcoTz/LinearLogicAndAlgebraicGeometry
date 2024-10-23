@@ -1,6 +1,6 @@
 use super::{
-    graded_ring::GradedRing, group::AbelianGroup, homogeneous_polynomial::HomogeneousPolynomial,
-    monomial::Monomial, ring::Ring,
+    errors::Error, graded_ring::GradedRing, group::AbelianGroup,
+    homogeneous_polynomial::HomogeneousPolynomial, monomial::Monomial, ring::Ring,
 };
 use std::{
     fmt,
@@ -8,51 +8,64 @@ use std::{
 };
 
 #[derive(PartialEq, Clone)]
-pub struct Polynomial<C: Ring, const N: usize> {
-    pub monomials: Vec<Monomial<C, N>>,
+pub struct Polynomial<C: Ring> {
+    dim: usize,
+    monomials: Vec<Monomial<C>>,
 }
 
-impl<C: Ring, const N: usize> Polynomial<C, N> {
-    pub fn eval(&self, x: [C; N]) -> C
+impl<C: Ring> Polynomial<C> {
+    pub fn new(monomials: Vec<Monomial<C>>) -> Polynomial<C> {
+        Polynomial {
+            dim: monomials.len(),
+            monomials,
+        }
+    }
+
+    pub fn monomials(&self) -> Vec<Monomial<C>>
     where
         C: Clone,
     {
+        self.monomials.clone()
+    }
+
+    pub fn eval(&self, x: Vec<C>) -> Result<C, Error>
+    where
+        C: Clone,
+    {
+        if self.dim != x.len() {
+            Err(Error::DimensionMismatch {
+                found: x.len(),
+                expected: self.dim,
+            })
+        } else {
+            Ok(())
+        }?;
+
         let mut res = C::zero();
         for mono in self.monomials.iter() {
-            let eval_res = mono.eval(x.clone());
+            let eval_res = mono.eval(x.clone())?;
             res = res + eval_res
         }
-        res
+        Ok(res)
     }
 }
 
-impl<C: Ring, const N: usize> AbelianGroup for Polynomial<C, N> {
-    fn zero() -> Polynomial<C, N> {
-        Polynomial {
-            monomials: vec![Monomial {
-                coefficient: C::zero(),
-                powers: [0; N],
-            }],
-        }
+impl<C: Ring> AbelianGroup for Polynomial<C> {
+    fn zero() -> Polynomial<C> {
+        Polynomial::new(vec![Monomial::new(C::zero(), vec![])])
     }
 }
 
-impl<C, const N: usize> Ring for Polynomial<C, N>
+impl<C> Ring for Polynomial<C>
 where
-    C: Ring,
-    C: Clone,
+    C: Ring + Clone,
 {
-    fn one() -> Polynomial<C, N> {
-        Polynomial {
-            monomials: vec![Monomial {
-                coefficient: C::one(),
-                powers: [0; N],
-            }],
-        }
+    fn one() -> Polynomial<C> {
+        Polynomial::new(vec![Monomial::new(C::one(), vec![])])
     }
 }
 
-impl<C, const N: usize> fmt::Display for Polynomial<C, N>
+impl<C> fmt::Display for Polynomial<C>
 where
     C: fmt::Display,
     C: Ring,
@@ -67,27 +80,27 @@ where
     }
 }
 
-impl<C: Ring, const N: usize> Neg for Polynomial<C, N> {
+impl<C: Ring> Neg for Polynomial<C> {
     type Output = Self;
     fn neg(self) -> Self {
         let monomials = self.monomials.into_iter().map(|mono| -mono).collect();
-        Polynomial { monomials }
+        Polynomial::new(monomials)
     }
 }
 
-impl<C, const N: usize> Add for Polynomial<C, N>
+impl<C> Add for Polynomial<C>
 where
     C: Add<Output = C>,
     C: Ring,
 {
-    type Output = Polynomial<C, N>;
+    type Output = Polynomial<C>;
     fn add(self, other: Self) -> Self::Output {
         let mut new_monomials = self.monomials;
         for other_mono in other.monomials.into_iter() {
             match new_monomials
                 .iter()
                 .enumerate()
-                .find(|(_, mono)| mono.powers == other_mono.powers)
+                .find(|(_, mono)| mono.powers() == other_mono.powers())
             {
                 None => {
                     new_monomials.push(other_mono);
@@ -99,52 +112,45 @@ where
                 }
             }
         }
-        Polynomial {
-            monomials: new_monomials,
-        }
+        Polynomial::new(new_monomials)
     }
 }
 
-impl<C, const N: usize> Mul for Polynomial<C, N>
+impl<C> Mul for Polynomial<C>
 where
     C: Add<Output = C>,
     C: Mul<Output = C>,
-    C: Ring,
-    C: Clone,
+    C: Ring + Clone,
 {
-    type Output = Polynomial<C, N>;
+    type Output = Polynomial<C>;
     fn mul(self, other: Self) -> Self::Output {
-        let mut new_monomials: Vec<Monomial<C, N>> = vec![];
+        let mut new_monomials: Vec<Monomial<C>> = vec![];
         for self_mono in self.monomials.iter() {
             for other_mono in other.monomials.iter() {
                 let mut new_mono = self_mono.clone() * other_mono.clone();
                 if let Some(mono) = new_monomials
                     .iter()
-                    .find(|mono| mono.powers == new_mono.powers)
+                    .find(|mono| mono.powers() == new_mono.powers())
                 {
                     new_mono.coefficient = new_mono.coefficient + mono.coefficient.clone();
                 }
                 new_monomials.push(new_mono);
             }
         }
-        Polynomial {
-            monomials: new_monomials,
-        }
+        Polynomial::new(new_monomials)
     }
 }
 
-impl<C, const N: usize> GradedRing for Polynomial<C, N>
+impl<C> GradedRing for Polynomial<C>
 where
-    C: Clone,
-    C: Ring,
+    C: Ring + Clone,
 {
     fn is_homogeneous(&self) -> bool {
-        <Polynomial<C, N> as TryInto<HomogeneousPolynomial<C, N>>>::try_into(self.to_owned())
-            .is_ok()
+        <Polynomial<C> as TryInto<HomogeneousPolynomial<C>>>::try_into(self.to_owned()).is_ok()
     }
 
-    fn degree(&self) -> Option<u32> {
-        <Polynomial<C, N> as TryInto<HomogeneousPolynomial<C, N>>>::try_into(self.to_owned())
+    fn degree(&self) -> Option<usize> {
+        <Polynomial<C> as TryInto<HomogeneousPolynomial<C>>>::try_into(self.to_owned())
             .map(|f| Some(f.deg()))
             .unwrap_or_default()
     }

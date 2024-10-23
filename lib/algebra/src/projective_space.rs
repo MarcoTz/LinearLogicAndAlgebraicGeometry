@@ -1,34 +1,37 @@
 use super::{errors::Error, field::Field};
 
 #[derive(Clone)]
-pub struct ProjectivePoint<K: Field, const N: usize> {
-    coordinates: [K; N],
+pub struct ProjectivePoint<K: Field> {
+    dim: usize,
+    coordinates: Vec<K>,
 }
 
-impl<K: Field, const N: usize> ProjectivePoint<K, N> {
-    pub fn new(coordinates: [K; N]) -> Result<Self, Error> {
+impl<K: Field> ProjectivePoint<K> {
+    pub fn new(coordinates: Vec<K>) -> Result<Self, Error> {
         if coordinates.iter().all(|elem| *elem == K::zero()) {
             Err(Error::ProjectiveAllZero)
         } else {
-            Ok(ProjectivePoint { coordinates })
+            Ok(ProjectivePoint {
+                dim: coordinates.len(),
+                coordinates,
+            })
         }
     }
 
-    pub fn dim(&self) -> i32 {
-        self.coordinates.len() as i32 - 1
+    pub fn dim(&self) -> usize {
+        self.dim
     }
 
-    pub fn as_arr(self) -> [K; N] {
+    pub fn as_arr(self) -> Vec<K> {
         self.coordinates
     }
 }
 
-impl<K, const N: usize> PartialEq for ProjectivePoint<K, N>
+impl<K> PartialEq for ProjectivePoint<K>
 where
-    K: Field,
-    K: Clone,
+    K: Field + Clone,
 {
-    fn eq(&self, other: &ProjectivePoint<K, N>) -> bool {
+    fn eq(&self, other: &ProjectivePoint<K>) -> bool {
         if self.dim() != other.dim() {
             return false;
         }

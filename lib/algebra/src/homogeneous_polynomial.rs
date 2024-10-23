@@ -5,107 +5,135 @@ use super::{
 use std::{fmt, ops::Mul};
 
 #[derive(Clone, PartialEq)]
-pub struct HomogeneousPolynomial<R: Ring, const N: usize> {
-    deg: u32,
-    pub monomials: Vec<Monomial<R, N>>,
+pub struct HomogeneousPolynomial<R: Ring> {
+    dim: usize,
+    deg: usize,
+    monomials: Vec<Monomial<R>>,
 }
 
-impl<R: Ring, const N: usize> HomogeneousPolynomial<R, N> {
-    pub fn deg(&self) -> u32 {
+impl<R: Ring> HomogeneousPolynomial<R> {
+    pub fn new(monomials: Vec<Monomial<R>>) -> Result<HomogeneousPolynomial<R>, Error> {
+        let mono1 = monomials.first();
+        let deg = match mono1 {
+            None => {
+                return Ok(HomogeneousPolynomial {
+                    dim: 0,
+                    deg: 0,
+                    monomials: vec![],
+                })
+            }
+            Some(mono) => mono.deg(),
+        };
+        if monomials.iter().all(|mono| mono.deg() == deg) {
+            Ok(())
+        } else {
+            Err(Error::WrongDegree {
+                found: monomials
+                    .iter()
+                    .find(|mono| mono.deg() != deg)
+                    .unwrap()
+                    .deg(),
+                expected: deg,
+            })
+        }?;
+
+        Ok(HomogeneousPolynomial {
+            dim: monomials.iter().map(|mono| mono.dim()).max().unwrap(),
+            deg,
+            monomials,
+        })
+    }
+
+    pub fn deg(&self) -> usize {
         self.deg
     }
 
-    pub fn eval(&self, x: [R; N]) -> R
+    pub fn dim(&self) -> usize {
+        self.dim
+    }
+
+    pub fn monomials(&self) -> Vec<Monomial<R>>
     where
         R: Clone,
     {
+        self.monomials.clone()
+    }
+
+    pub fn eval(&self, x: Vec<R>) -> Result<R, Error>
+    where
+        R: Clone,
+    {
+        if self.dim != x.len() {
+            Err(Error::DimensionMismatch {
+                found: x.len(),
+                expected: self.dim,
+            })
+        } else {
+            Ok(())
+        }?;
+
         let mut res = R::zero();
         for mono in self.monomials.iter() {
-            let eval_res = mono.eval(x.clone());
+            let eval_res = mono.eval(x.clone())?;
             res = res + eval_res
         }
-        res
+        Ok(res)
     }
 
     pub fn apply_morphism<const M: usize>(
         self,
-        morphism: ProjectiveMorphism<R, M, N>,
-    ) -> Result<HomogeneousPolynomial<R, M>, Error>
+        morphism: ProjectiveMorphism<R>,
+    ) -> Result<HomogeneousPolynomial<R>, Error>
     where
         R: Field + Clone,
     {
-        let mut res = Polynomial { monomials: vec![] };
+        let mut res = Polynomial::new(vec![]);
         for mono in self.monomials {
-            let new_poly = mono.compose_morphism(morphism.clone());
+            let new_poly = mono.compose_morphism(morphism.clone())?;
             res = res + new_poly;
         }
         res.try_into()
     }
 }
 
-impl<R: Ring, const N: usize> From<HomogeneousPolynomial<R, N>> for Polynomial<R, N> {
-    fn from(homo: HomogeneousPolynomial<R, N>) -> Polynomial<R, N> {
-        Polynomial {
-            monomials: homo.monomials,
-        }
+impl<R: Ring> From<HomogeneousPolynomial<R>> for Polynomial<R> {
+    fn from(homo: HomogeneousPolynomial<R>) -> Polynomial<R> {
+        Polynomial::new(homo.monomials)
     }
 }
 
-impl<R: Ring, const N: usize> TryFrom<Polynomial<R, N>> for HomogeneousPolynomial<R, N> {
+impl<R: Ring + Clone> TryFrom<Polynomial<R>> for HomogeneousPolynomial<R> {
     type Error = Error;
-    fn try_from(poly: Polynomial<R, N>) -> Result<HomogeneousPolynomial<R, N>, Error> {
-        if poly.monomials.is_empty() {
-            return Ok(HomogeneousPolynomial {
-                deg: 0,
-                monomials: vec![],
-            });
-        }
-
-        let deg = poly.monomials.first().unwrap().deg();
-        for mono in poly.monomials.iter() {
-            if mono.deg() != deg {
-                return Err(Error::WrongDegree {
-                    found: mono.deg(),
-                    expected: deg,
-                });
-            }
-        }
-        Ok(HomogeneousPolynomial {
-            deg,
-            monomials: poly.monomials,
-        })
+    fn try_from(poly: Polynomial<R>) -> Result<HomogeneousPolynomial<R>, Error> {
+        HomogeneousPolynomial::new(poly.monomials())
     }
 }
 
-impl<R, const N: usize> Mul for HomogeneousPolynomial<R, N>
+impl<R> Mul for HomogeneousPolynomial<R>
 where
     R: Ring,
     R: Clone,
 {
-    type Output = HomogeneousPolynomial<R, N>;
-    fn mul(self, other: HomogeneousPolynomial<R, N>) -> HomogeneousPolynomial<R, N> {
-        let new_deg = self.deg + other.deg;
-        let mut new_monomials: Vec<Monomial<R, N>> = vec![];
+    type Output = HomogeneousPolynomial<R>;
+    fn mul(self, other: HomogeneousPolynomial<R>) -> HomogeneousPolynomial<R> {
+        let mut new_monomials: Vec<Monomial<R>> = vec![];
         for self_mono in self.monomials.iter() {
             for other_mono in other.monomials.iter() {
                 let mut new_mono = self_mono.clone() * other_mono.clone();
                 if let Some(mono) = new_monomials
                     .iter()
-                    .find(|mono| mono.powers == new_mono.powers)
+                    .find(|mono| mono.powers() == new_mono.powers())
                 {
                     new_mono.coefficient = new_mono.coefficient + mono.coefficient.clone();
                 }
                 new_monomials.push(new_mono);
             }
         }
-        HomogeneousPolynomial {
-            deg: new_deg,
-            monomials: new_monomials,
-        }
+        HomogeneousPolynomial::new(new_monomials).unwrap()
     }
 }
 
-impl<R, const N: usize> fmt::Display for HomogeneousPolynomial<R, N>
+impl<R> fmt::Display for HomogeneousPolynomial<R>
 where
     R: fmt::Display,
     R: Ring,
