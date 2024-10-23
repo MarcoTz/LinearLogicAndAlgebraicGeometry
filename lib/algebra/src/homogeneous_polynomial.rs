@@ -1,4 +1,7 @@
-use super::{errors::Error, monomial::Monomial, polynomial::Polynomial, ring::Ring};
+use super::{
+    errors::Error, field::Field, monomial::Monomial, polynomial::Polynomial,
+    projective_morphism::ProjectiveMorphism, ring::Ring,
+};
 use std::{fmt, ops::Mul};
 
 #[derive(Clone, PartialEq)]
@@ -22,6 +25,21 @@ impl<R: Ring, const N: usize> HomogeneousPolynomial<R, N> {
             res = res + eval_res
         }
         res
+    }
+
+    pub fn apply_morphism<const M: usize>(
+        self,
+        morphism: ProjectiveMorphism<R, M, N>,
+    ) -> Result<HomogeneousPolynomial<R, M>, Error>
+    where
+        R: Field + Clone,
+    {
+        let mut res = Polynomial { monomials: vec![] };
+        for mono in self.monomials {
+            let new_poly = mono.compose_morphism(morphism.clone());
+            res = res + new_poly;
+        }
+        res.try_into()
     }
 }
 

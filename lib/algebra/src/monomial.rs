@@ -1,4 +1,6 @@
-use super::{polynomial::Polynomial, ring::Ring};
+use super::{
+    field::Field, polynomial::Polynomial, projective_morphism::ProjectiveMorphism, ring::Ring,
+};
 use std::{
     fmt,
     ops::{Add, Mul, Neg},
@@ -25,6 +27,41 @@ impl<C: Ring, const N: usize> Monomial<C, N> {
 
     pub fn deg(&self) -> u32 {
         self.powers.iter().sum()
+    }
+
+    pub fn compose_monomial<const M: usize>(self, other: Monomial<C, M>) -> Monomial<C, M>
+    where
+        C: Clone,
+    {
+        let new_powers = other.powers.map(|pow| pow * self.deg());
+        Monomial {
+            coefficient: self.coefficient * other.coefficient.pow(N as u32),
+            powers: new_powers,
+        }
+    }
+
+    pub fn compose_morphism<const M: usize>(
+        self,
+        morphism: ProjectiveMorphism<C, M, N>,
+    ) -> Polynomial<C, M>
+    where
+        C: Field + Clone,
+    {
+        let mut res = Polynomial { monomials: vec![] };
+        for j in 0..N {
+            for mono in morphism.coordinate_functions[j].monomials.iter() {
+                res = res + self.clone().compose_monomial(mono.clone()).into();
+            }
+        }
+        res
+    }
+}
+
+impl<C: Ring, const N: usize> From<Monomial<C, N>> for Polynomial<C, N> {
+    fn from(mono: Monomial<C, N>) -> Polynomial<C, N> {
+        Polynomial {
+            monomials: vec![mono],
+        }
     }
 }
 

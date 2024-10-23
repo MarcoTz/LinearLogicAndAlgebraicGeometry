@@ -8,6 +8,7 @@ pub mod homogeneous_polynomial;
 pub mod ideal;
 pub mod monomial;
 pub mod polynomial;
+pub mod projective_morphism;
 pub mod projective_scheme;
 pub mod projective_space;
 pub mod ring;
