@@ -69,11 +69,7 @@ impl<R: Ring> Monomial<R> {
         )
     }
 
-    pub fn compose_morphism(
-        self,
-        morphism: ProjectiveMorphism<R>, //, M, N>,
-    ) -> Result<Polynomial<R>, Error>
-    //M
+    pub fn compose_morphism(self, morphism: ProjectiveMorphism<R>) -> Result<Polynomial<R>, Error>
     where
         R: Field + Clone,
     {
@@ -99,6 +95,13 @@ impl<R: Ring> Monomial<R> {
                 found: mono.deg(),
             }),
         }
+    }
+
+    pub fn shift_powers(self, n: usize) -> Monomial<R> {
+        Monomial::new(
+            self.coefficient,
+            self.powers.into_iter().map(|pow| pow + n).collect(),
+        )
     }
 }
 

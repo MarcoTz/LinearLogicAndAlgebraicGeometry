@@ -67,9 +67,9 @@ impl<R: Ring> HomogeneousPolynomial<R> {
         Ok(res)
     }
 
-    pub fn apply_morphism<const M: usize>(
+    pub fn compose_morphism(
         self,
-        morphism: ProjectiveMorphism<R>,
+        morphism: &ProjectiveMorphism<R>,
     ) -> Result<HomogeneousPolynomial<R>, Error>
     where
         R: Field + Clone,
@@ -80,6 +80,20 @@ impl<R: Ring> HomogeneousPolynomial<R> {
             res = res + new_poly;
         }
         res.try_into()
+    }
+
+    pub fn product(self, other: HomogeneousPolynomial<R>) -> HomogeneousPolynomial<R>
+    where
+        R: Clone,
+    {
+        let new_other: Vec<Monomial<R>> = other
+            .monomials()
+            .into_iter()
+            .map(|mono| mono.shift_powers(self.dim))
+            .collect();
+        let mut new_monomials = self.monomials;
+        new_monomials.extend(new_other);
+        HomogeneousPolynomial::new(new_monomials).unwrap()
     }
 
     pub fn check_deg(polys: &[Self]) -> Result<usize, Error> {

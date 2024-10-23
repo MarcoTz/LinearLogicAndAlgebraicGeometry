@@ -1,4 +1,4 @@
-use super::ProjectivePoint;
+use super::{ProjectiveMorphism, ProjectivePoint};
 use crate::{errors::Error, field::Field, polynomials::HomogeneousPolynomial};
 
 use std::fmt;
@@ -21,6 +21,25 @@ impl<K: Field> ProjectiveScheme<K> {
         })
     }
 
+    pub fn dim(&self) -> usize {
+        self.dim
+    }
+
+    pub fn apply_morphism(
+        self,
+        morphism: ProjectiveMorphism<K>,
+    ) -> Result<ProjectiveScheme<K>, Error>
+    where
+        K: Clone,
+    {
+        let new_generators = self
+            .ideal_generators
+            .into_iter()
+            .map(|gen| gen.compose_morphism(&morphism))
+            .collect::<Result<Vec<HomogeneousPolynomial<K>>, Error>>()?;
+        ProjectiveScheme::new(new_generators)
+    }
+
     pub fn disjoint_union(self, other: ProjectiveScheme<K>) -> ProjectiveScheme<K>
     where
         K: Clone,
@@ -35,8 +54,19 @@ impl<K: Field> ProjectiveScheme<K> {
         ProjectiveScheme::new(new_polys).unwrap()
     }
 
-    pub fn product(self, other: &ProjectiveScheme<K>) -> ProjectiveScheme<K> {
-        todo!()
+    pub fn product(self, other: &ProjectiveScheme<K>) -> Result<ProjectiveScheme<K>, Error>
+    where
+        K: Clone,
+    {
+        let embedding = ProjectiveMorphism::segre_embedding(self.dim(), other.dim());
+        let mut new_polys = vec![];
+        for self_poly in self.ideal_generators.iter() {
+            for other_poly in other.ideal_generators.iter() {
+                let new_poly = self_poly.clone().product(other_poly.clone());
+                new_polys.push(new_poly.compose_morphism(&embedding)?);
+            }
+        }
+        ProjectiveScheme::new(new_polys)
     }
 
     pub fn contains(&self, pt: &ProjectivePoint<K>) -> Result<bool, Error>
