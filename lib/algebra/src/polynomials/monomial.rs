@@ -1,4 +1,4 @@
-use super::polynomial::Polynomial;
+use super::{HomogeneousPolynomial, Polynomial};
 use crate::{errors::Error, field::Field, projective::ProjectiveMorphism, ring::Ring};
 use std::{
     fmt,
@@ -6,14 +6,14 @@ use std::{
 };
 
 #[derive(Clone, PartialEq)]
-pub struct Monomial<C: Ring> {
+pub struct Monomial<R: Ring> {
     dim: usize,
-    pub coefficient: C,
+    pub coefficient: R,
     powers: Vec<usize>,
 }
 
-impl<C: Ring> Monomial<C> {
-    pub fn new(coefficient: C, powers: Vec<usize>) -> Monomial<C> {
+impl<R: Ring> Monomial<R> {
+    pub fn new(coefficient: R, powers: Vec<usize>) -> Monomial<R> {
         Monomial {
             dim: powers.len(),
             coefficient,
@@ -29,9 +29,9 @@ impl<C: Ring> Monomial<C> {
         self.dim
     }
 
-    pub fn eval(&self, x: Vec<C>) -> Result<C, Error>
+    pub fn eval(&self, x: Vec<R>) -> Result<R, Error>
     where
-        C: Clone,
+        R: Clone,
     {
         if self.dim != x.len() {
             Err(Error::DimensionMismatch {
@@ -54,9 +54,9 @@ impl<C: Ring> Monomial<C> {
         self.powers.iter().sum()
     }
 
-    pub fn compose_monomial(self, other: Monomial<C>) -> Monomial<C>
+    pub fn compose_monomial(self, other: Monomial<R>) -> Monomial<R>
     where
-        C: Clone,
+        R: Clone,
     {
         let new_powers = other
             .powers
@@ -71,11 +71,11 @@ impl<C: Ring> Monomial<C> {
 
     pub fn compose_morphism(
         self,
-        morphism: ProjectiveMorphism<C>, //, M, N>,
-    ) -> Result<Polynomial<C>, Error>
+        morphism: ProjectiveMorphism<R>, //, M, N>,
+    ) -> Result<Polynomial<R>, Error>
     //M
     where
-        C: Field + Clone,
+        R: Field + Clone,
     {
         let mut res = Polynomial::new(vec![]);
         for j in 0..self.dim {
@@ -86,11 +86,31 @@ impl<C: Ring> Monomial<C> {
         }
         Ok(res)
     }
+
+    pub fn check_deg(monos: &[Monomial<R>]) -> Result<(), Error> {
+        let deg = match monos.first() {
+            None => return Ok(()),
+            Some(mono) => mono.deg(),
+        };
+        match monos.iter().find(|mono| mono.deg() != deg) {
+            None => Ok(()),
+            Some(mono) => Err(Error::WrongDegree {
+                expected: deg,
+                found: mono.deg(),
+            }),
+        }
+    }
 }
 
-impl<C: Ring> From<Monomial<C>> for Polynomial<C> {
-    fn from(mono: Monomial<C>) -> Polynomial<C> {
+impl<R: Ring> From<Monomial<R>> for Polynomial<R> {
+    fn from(mono: Monomial<R>) -> Polynomial<R> {
         Polynomial::new(vec![mono])
+    }
+}
+
+impl<R: Ring> From<Monomial<R>> for HomogeneousPolynomial<R> {
+    fn from(mono: Monomial<R>) -> HomogeneousPolynomial<R> {
+        HomogeneousPolynomial::new(vec![mono]).unwrap()
     }
 }
 

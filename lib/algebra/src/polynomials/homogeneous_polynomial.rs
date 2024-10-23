@@ -22,18 +22,7 @@ impl<R: Ring> HomogeneousPolynomial<R> {
             }
             Some(mono) => mono.deg(),
         };
-        if monomials.iter().all(|mono| mono.deg() == deg) {
-            Ok(())
-        } else {
-            Err(Error::WrongDegree {
-                found: monomials
-                    .iter()
-                    .find(|mono| mono.deg() != deg)
-                    .unwrap()
-                    .deg(),
-                expected: deg,
-            })
-        }?;
+        Monomial::check_deg(monomials.as_slice())?;
 
         Ok(HomogeneousPolynomial {
             dim: monomials.iter().map(|mono| mono.dim()).max().unwrap(),
@@ -91,6 +80,34 @@ impl<R: Ring> HomogeneousPolynomial<R> {
             res = res + new_poly;
         }
         res.try_into()
+    }
+
+    pub fn check_deg(polys: &[Self]) -> Result<usize, Error> {
+        let deg = match polys.first() {
+            None => return Ok(0),
+            Some(poly) => poly.deg(),
+        };
+        match polys.iter().find(|poly| poly.deg != deg) {
+            None => Ok(deg),
+            Some(poly) => Err(Error::WrongDegree {
+                expected: deg,
+                found: poly.deg(),
+            }),
+        }
+    }
+
+    pub fn check_dim(polys: &[Self]) -> Result<usize, Error> {
+        let dim = match polys.first() {
+            None => return Ok(0),
+            Some(poly) => poly.dim(),
+        };
+        match polys.iter().find(|poly| poly.dim() != dim) {
+            None => Ok(dim),
+            Some(poly) => Err(Error::DimensionMismatch {
+                found: poly.dim(),
+                expected: dim,
+            }),
+        }
     }
 }
 

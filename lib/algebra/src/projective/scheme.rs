@@ -12,40 +12,8 @@ impl<K: Field> ProjectiveScheme<K> {
     pub fn new(
         ideal_generators: Vec<HomogeneousPolynomial<K>>,
     ) -> Result<ProjectiveScheme<K>, Error> {
-        let (dim, deg) = match ideal_generators.first() {
-            None => {
-                return Ok(ProjectiveScheme {
-                    dim: 0,
-                    ideal_generators: vec![],
-                })
-            }
-            Some(poly) => (poly.dim(), poly.deg()),
-        };
-        if ideal_generators.iter().all(|poly| poly.deg() == deg) {
-            Ok(())
-        } else {
-            Err(Error::WrongDegree {
-                expected: deg,
-                found: ideal_generators
-                    .iter()
-                    .find(|poly| poly.deg() != deg)
-                    .unwrap()
-                    .deg(),
-            })
-        }?;
-
-        if ideal_generators.iter().all(|poly| poly.dim() == dim) {
-            Ok(())
-        } else {
-            Err(Error::DimensionMismatch {
-                expected: dim,
-                found: ideal_generators
-                    .iter()
-                    .find(|poly| poly.dim() != dim)
-                    .unwrap()
-                    .dim(),
-            })
-        }?;
+        HomogeneousPolynomial::check_deg(ideal_generators.as_slice())?;
+        let dim = HomogeneousPolynomial::check_dim(ideal_generators.as_slice())?;
 
         Ok(ProjectiveScheme {
             dim,
